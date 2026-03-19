@@ -1,11 +1,18 @@
 """Configuration management."""
 
-from pydantic_settings import BaseSettings
 from typing import Optional
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Application settings."""
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        case_sensitive=False,
+        extra="ignore",
+    )
     
     # Firebase (replaces PostgreSQL)
     firebase_credentials_path: Optional[str] = None  # Path to service account JSON
@@ -39,10 +46,6 @@ class Settings(BaseSettings):
     # App
     app_name: str = "$wap"
     debug: bool = False
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
 
 settings = Settings()
