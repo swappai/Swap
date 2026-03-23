@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     azure_search_endpoint: Optional[str] = None
     azure_search_api_key: Optional[str] = None
     azure_search_index: str = "swap-users"
+    azure_search_skills_index: str = "swap-skills"
 
     # ── Redis Cache ───────────────────────────────────────────────────────────
     redis_enabled: bool = True

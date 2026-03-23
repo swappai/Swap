@@ -10,10 +10,12 @@ from app.schemas import (
     SwapRequestAction,
     SwapRequestStatus,
     SwapParticipant,
+    SwapConfirmRequest,
     ConversationStatus,
 )
 from app.cosmos_db import get_cosmos_service
 from app.email_service import get_email_service
+from app.routers.points import award_swap_points
 
 router = APIRouter(prefix="/swap-requests", tags=["swap-requests"])
 
@@ -97,6 +99,10 @@ def create_swap_request(
             "message": request.message,
             "responded_at": None,
             "conversation_id": None,
+            "requester_confirmed": False,
+            "recipient_confirmed": False,
+            "requester_offer_skill_id": request.requester_offer_skill_id,
+            "requester_need_skill_id": request.requester_need_skill_id,
         },
     )
 
@@ -271,3 +277,104 @@ def get_swap_request(
         raise HTTPException(status_code=403, detail="Not authorized to view this request")
 
     return _enrich_swap_request(request_data)
+
+
+@router.post("/{request_id}/confirm-completion", response_model=SwapRequestResponse)
+def confirm_completion(
+    request_id: str,
+    confirmation: SwapConfirmRequest,
+    uid: str = Query(..., description="UID of the confirming user"),
+):
+    """
+    Confirm swap completion. Both participants must confirm before points are awarded.
+
+    1. Validates user is a participant and status is accepted
+    2. Marks the caller's side as confirmed
+    3. If BOTH confirmed: awards points, marks status=completed, sends system messages
+    4. Returns updated swap request
+    """
+    cosmos = get_cosmos_service()
+
+    swap_req = cosmos.get_swap_request_by_id(request_id)
+    if not swap_req:
+        raise HTTPException(status_code=404, detail="Swap request not found")
+
+    requester_uid = swap_req["requester_uid"]
+    recipient_uid = swap_req["recipient_uid"]
+
+    if uid not in [requester_uid, recipient_uid]:
+        raise HTTPException(status_code=403, detail="Not a participant in this swap")
+
+    if swap_req["status"] != SwapRequestStatus.accepted.value:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Can only complete accepted swaps (current status: {swap_req['status']})",
+        )
+
+    # Determine which side is confirming
+    is_requester = uid == requester_uid
+    confirm_field = "requester_confirmed" if is_requester else "recipient_confirmed"
+
+    if swap_req.get(confirm_field, False):
+        raise HTTPException(status_code=400, detail="You have already confirmed completion")
+
+    update_data = {confirm_field: True}
+
+    # Check if the OTHER side has already confirmed
+    other_field = "recipient_confirmed" if is_requester else "requester_confirmed"
+    both_confirmed = swap_req.get(other_field, False)
+
+    conversation_id = swap_req.get("conversation_id")
+
+    if both_confirmed:
+        # BOTH confirmed — award points and mark completed
+        points_earned = award_swap_points(
+            cosmos,
+            request_id=request_id,
+            requester_uid=requester_uid,
+            recipient_uid=recipient_uid,
+            hours=confirmation.hours,
+            skill_level=confirmation.skill_level,
+            notes=confirmation.notes,
+        )
+        update_data["status"] = SwapRequestStatus.completed.value
+
+        # Send system messages
+        if conversation_id:
+            now = datetime.utcnow().isoformat()
+            cosmos.create_message(
+                conversation_id=conversation_id,
+                data={
+                    "sender_uid": "system",
+                    "content": f"Both parties confirmed! Swap completed — {points_earned} points awarded to each.",
+                    "sent_at": now,
+                    "read_at": None,
+                    "read_by": [],
+                    "type": "system",
+                },
+            )
+    else:
+        # First confirmation — send system message
+        if conversation_id:
+            confirmer_profile = cosmos.get_profile(uid)
+            confirmer_name = (confirmer_profile or {}).get("display_name", "A participant")
+            now = datetime.utcnow().isoformat()
+            cosmos.create_message(
+                conversation_id=conversation_id,
+                data={
+                    "sender_uid": "system",
+                    "content": f"{confirmer_name} has confirmed the swap is complete.",
+                    "sent_at": now,
+                    "read_at": None,
+                    "read_by": [],
+                    "type": "system",
+                },
+            )
+
+    updated = cosmos.update_swap_request(
+        request_id=request_id,
+        requester_uid=requester_uid,
+        update_data=update_data,
+    )
+
+    return _enrich_swap_request(updated)

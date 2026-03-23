@@ -29,6 +29,8 @@ class CosmosService:
         "swap_requests": "/uid",
         "blocks": "/uid",
         "reports": "/uid",
+        "points_transactions": "/uid",
+        "skills": "/posted_by",
     }
 
     def __init__(self) -> None:
@@ -427,6 +429,91 @@ class CosmosService:
         results = [_clean(i) for i in items]
         results.sort(key=lambda x: x.get("created_at", ""), reverse=True)
         return results
+
+    # ── Points / Credits ─────────────────────────────────────────────────────
+
+    def create_points_transaction(self, uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a points/credits transaction record."""
+        txn_id = str(uuid.uuid4())
+        now = _utcnow_iso()
+        doc = {
+            "id": txn_id,
+            "uid": uid,
+            "created_at": now,
+            **data,
+        }
+        self._container("points_transactions").create_item(body=doc)
+        return _clean(doc)
+
+    def get_points_balance(self, uid: str) -> Dict[str, int]:
+        """Calculate current points and credits balance for a user."""
+        query = "SELECT c.type, c.points, c.credits FROM c WHERE c.uid = @uid"
+        params = [{"name": "@uid", "value": uid}]
+        items = list(
+            self._container("points_transactions").query_items(
+                query=query, parameters=params, partition_key=uid
+            )
+        )
+        total_points = 0
+        total_credits = 0
+        for item in items:
+            if item.get("type") == "earned":
+                total_points += item.get("points", 0)
+                total_credits += item.get("credits", 0)
+            elif item.get("type") == "spent":
+                total_points -= item.get("points", 0)
+                total_credits -= item.get("credits", 0)
+        return {"points": max(total_points, 0), "credits": max(total_credits, 0)}
+
+    def get_points_history(self, uid: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get transaction history for a user, newest first."""
+        query = f"SELECT * FROM c WHERE c.uid = @uid ORDER BY c.created_at DESC OFFSET 0 LIMIT {limit}"
+        params = [{"name": "@uid", "value": uid}]
+        items = list(
+            self._container("points_transactions").query_items(
+                query=query, parameters=params, partition_key=uid
+            )
+        )
+        return [_clean(i) for i in items]
+
+    # ── Skills ────────────────────────────────────────────────────────────────
+
+    def create_skill(self, uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a skill document. Uses posted_by (uid) as partition key."""
+        skill_id = str(uuid.uuid4())
+        now = _utcnow_iso()
+        doc = {
+            "id": skill_id,
+            "posted_by": uid,
+            "created_at": now,
+            "updated_at": now,
+            **data,
+        }
+        self._container("skills").create_item(body=doc)
+        return _clean(doc)
+
+    def get_skill(self, skill_id: str, posted_by: str) -> Optional[Dict[str, Any]]:
+        """Fetch a skill by ID + partition key."""
+        try:
+            doc = self._container("skills").read_item(item=skill_id, partition_key=posted_by)
+            return _clean(doc)
+        except cosmos_exc.CosmosResourceNotFoundError:
+            return None
+
+    def get_skills_by_user(self, uid: str) -> List[Dict[str, Any]]:
+        """List all skills posted by a user."""
+        query = "SELECT * FROM c WHERE c.posted_by = @uid ORDER BY c.created_at DESC"
+        params = [{"name": "@uid", "value": uid}]
+        items = list(
+            self._container("skills").query_items(
+                query=query, parameters=params, partition_key=uid
+            )
+        )
+        return [_clean(i) for i in items]
+
+    def delete_skill(self, skill_id: str, posted_by: str) -> None:
+        """Delete a skill document."""
+        self._container("skills").delete_item(item=skill_id, partition_key=posted_by)
 
     # ── Generic helpers (used by migration script) ────────────────────────────
 

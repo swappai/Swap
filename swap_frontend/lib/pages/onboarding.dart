@@ -168,27 +168,26 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
       final offersText = skillsListToText(_offer);
       final needsText = skillsListToText(_need);
 
-      // Best-effort: do not block UX if backend is slow/unavailable.
-      try {
-        await ProfileService().upsertProfile(
-          uid: user.uid,
-          email: user.email ?? '',
-          displayName: _fullName.text.trim().isNotEmpty
-              ? _fullName.text.trim()
-              : (_username.text.trim().isNotEmpty
-                    ? _username.text.trim()
-                    : (user.email ?? '')),
-          skillsToOffer: offersText,
-          servicesNeeded: needsText,
-          bio: _bio.text.trim(),
-          city: _city.text.trim(),
-          timeout: const Duration(seconds: 8),
-        );
-      } on TimeoutException catch (e) {
-        debugPrint('[Onboarding] Backend upsert timed out: $e');
-      } catch (e) {
-        debugPrint('[Onboarding] Backend upsert failed (non-fatal): $e');
-      }
+      await ProfileService().upsertProfile(
+        uid: user.uid,
+        email: user.email ?? '',
+        displayName: _fullName.text.trim().isNotEmpty
+            ? _fullName.text.trim()
+            : (_username.text.trim().isNotEmpty
+                  ? _username.text.trim()
+                  : (user.email ?? '')),
+        skillsToOffer: offersText,
+        servicesNeeded: needsText,
+        bio: _bio.text.trim(),
+        city: _city.text.trim(),
+        fullName: _fullName.text.trim(),
+        username: _username.text.trim(),
+        timezone: _timezone ?? '',
+        dmOpen: _dmOpen,
+        emailUpdates: _emailUpdates,
+        showCity: _showCity,
+        timeout: const Duration(seconds: 12),
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

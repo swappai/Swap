@@ -4,6 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
 
+from app.config import settings
 from app.schemas import ProfileCreate, ProfileUpdate, ProfileResponse
 from app.cosmos_db import get_cosmos_service
 from app.embeddings import get_embedding_service
@@ -53,12 +54,16 @@ def upsert_profile(profile_data: ProfileCreate):
     # Upsert to Cosmos DB
     saved_profile = cosmos_service.upsert_profile(profile_data.uid, profile_dict)
     
-    # Generate embeddings (only if skills are provided)
-    if profile_data.skills_to_offer and profile_data.services_needed:
-        offer_vec = embedding_service.encode(profile_data.skills_to_offer)
-        need_vec = embedding_service.encode(profile_data.services_needed)
-        
-        # Prepare payload for Qdrant (include all searchable fields)
+    # Generate embeddings if either skills_to_offer or services_needed is provided.
+    # Use a zero vector for whichever field is empty so the profile is still searchable.
+    has_offers = bool(profile_data.skills_to_offer and profile_data.skills_to_offer.strip())
+    has_needs = bool(profile_data.services_needed and profile_data.services_needed.strip())
+
+    if has_offers or has_needs:
+        zero_vec = [0.0] * settings.vector_dim
+        offer_vec = embedding_service.encode(profile_data.skills_to_offer) if has_offers else zero_vec
+        need_vec = embedding_service.encode(profile_data.services_needed) if has_needs else zero_vec
+
         payload = {
             "uid": profile_data.uid,
             "email": profile_data.email,
@@ -73,9 +78,10 @@ def upsert_profile(profile_data: ProfileCreate):
             "services_needed": profile_data.services_needed,
             "dm_open": profile_data.dm_open if profile_data.dm_open is not None else True,
             "show_city": profile_data.show_city if profile_data.show_city is not None else True,
+            "swap_credits": saved_profile.get("swap_credits", 0),
+            "swaps_completed": saved_profile.get("swaps_completed", 0),
         }
-        
-        # Upsert to Azure AI Search (use uid as the document ID)
+
         search_service.upsert_profile(
             username=profile_data.uid,
             offer_vec=offer_vec,
@@ -143,18 +149,19 @@ def update_profile(uid: str, profile_update: ProfileUpdate):
     # Update Cosmos DB
     updated_profile = cosmos_service.update_profile(uid, update_dict)
     
-    # If skills changed, update Qdrant embeddings
+    # If skills changed, update search index embeddings
     if 'skills_to_offer' in update_dict or 'services_needed' in update_dict:
-        skills_to_offer = updated_profile.get('skills_to_offer', existing_profile.get('skills_to_offer'))
-        services_needed = updated_profile.get('services_needed', existing_profile.get('services_needed'))
-        
-        # Only update Qdrant if both skills are present
-        if skills_to_offer and services_needed:
-            # Regenerate embeddings
-            offer_vec = embedding_service.encode(skills_to_offer)
-            need_vec = embedding_service.encode(services_needed)
-            
-            # Update Azure AI Search
+        skills_to_offer = updated_profile.get('skills_to_offer', existing_profile.get('skills_to_offer', ''))
+        services_needed = updated_profile.get('services_needed', existing_profile.get('services_needed', ''))
+
+        has_offers = bool(skills_to_offer and skills_to_offer.strip())
+        has_needs = bool(services_needed and services_needed.strip())
+
+        if has_offers or has_needs:
+            zero_vec = [0.0] * settings.vector_dim
+            offer_vec = embedding_service.encode(skills_to_offer) if has_offers else zero_vec
+            need_vec = embedding_service.encode(services_needed) if has_needs else zero_vec
+
             payload = {
                 "uid": uid,
                 "email": updated_profile.get('email'),
@@ -169,6 +176,8 @@ def update_profile(uid: str, profile_update: ProfileUpdate):
                 "services_needed": services_needed,
                 "dm_open": updated_profile.get('dm_open', True),
                 "show_city": updated_profile.get('show_city', True),
+                "swap_credits": updated_profile.get('swap_credits', 0),
+                "swaps_completed": updated_profile.get('swaps_completed', 0),
             }
 
             search_service.upsert_profile(

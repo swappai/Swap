@@ -31,14 +31,15 @@ class ProfileService {
     String servicesNeeded = '',
     String bio = '',
     String city = '',
+    String fullName = '',
+    String username = '',
+    String timezone = '',
+    bool? dmOpen,
+    bool? emailUpdates,
+    bool? showCity,
     Duration? timeout,
   }) async {
-    if (skillsToOffer.trim().isEmpty) {
-      debugPrint(
-        '[ProfileService] WARN: skillsToOffer is empty. Upsert skipped.',
-      );
-      return;
-    }
+    // Allow empty skillsToOffer — the backend handles it as Optional.
 
     final uri = Uri.parse('$baseUrl/profiles/upsert');
 
@@ -51,7 +52,7 @@ class ProfileService {
       } catch (_) {}
     }
 
-    final bodyMap = {
+    final bodyMap = <String, dynamic>{
       'uid': uid,
       'email': email,
       'display_name': displayName,
@@ -60,6 +61,12 @@ class ProfileService {
       'bio': bio,
       'city': city,
     };
+    if (fullName.isNotEmpty) bodyMap['full_name'] = fullName;
+    if (username.isNotEmpty) bodyMap['username'] = username;
+    if (timezone.isNotEmpty) bodyMap['timezone'] = timezone;
+    if (dmOpen != null) bodyMap['dm_open'] = dmOpen;
+    if (emailUpdates != null) bodyMap['email_updates'] = emailUpdates;
+    if (showCity != null) bodyMap['show_city'] = showCity;
     final body = jsonEncode(bodyMap);
 
     debugPrint('[ProfileService] POST $uri headers=$headers body=$bodyMap');

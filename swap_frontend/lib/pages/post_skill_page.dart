@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/b2c_auth_service.dart';
-import '../services/profile_service.dart';
+import '../services/skill_service.dart';
 import 'home_page.dart';
 import '../widgets/app_sidebar.dart';
 
@@ -102,34 +102,16 @@ class _PostSkillPageState extends State<PostSkillPage> {
     setState(() => _publishing = true);
 
     try {
-      final profileSvc = ProfileService();
-      final existing = await profileSvc.getProfile(user.uid);
-
-      // Build the new skill string: "Title (Difficulty)"
-      final newSkill = _difficulty != null && _difficulty!.isNotEmpty
-          ? '${_titleController.text.trim()} ($_difficulty)'
-          : _titleController.text.trim();
-
-      // Append to existing skills_to_offer (comma-separated)
-      final currentSkills =
-          (existing?['skills_to_offer'] ?? '').toString().trim();
-      final updatedSkills = currentSkills.isEmpty
-          ? newSkill
-          : '$currentSkills, $newSkill';
-
-      await profileSvc.upsertProfile(
-        uid: user.uid,
-        email: user.email ?? existing?['email'] ?? '',
-        displayName: user.displayName ??
-            existing?['display_name'] ??
-            existing?['full_name'] ??
-            '',
-        skillsToOffer: updatedSkills,
-        servicesNeeded:
-            (existing?['services_needed'] ?? '').toString(),
-        bio: (existing?['bio'] ?? '').toString(),
-        city: (existing?['city'] ?? '').toString(),
-      );
+      await SkillService().createSkill(user.uid, {
+        'title': _titleController.text.trim(),
+        'description': _descriptionController.text.trim(),
+        'category': _category,
+        'difficulty': _difficulty,
+        'estimated_hours': double.tryParse(_hoursController.text) ?? 1,
+        'delivery': _delivery,
+        'tags': _tags,
+        'deliverables': _deliverables,
+      });
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

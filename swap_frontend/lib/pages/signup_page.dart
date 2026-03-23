@@ -32,9 +32,6 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-  // B2C handles all identity providers — same flow as sign-up
-  Future<void> _google() => _signup();
-
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 900;

@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import profiles, search, swaps, swap_requests, messages, moderation
+from app.routers import profiles, search, swaps, swap_requests, messages, moderation, points, skills
 
 logger = logging.getLogger(__name__)
 
@@ -91,6 +91,8 @@ app.include_router(swaps.router)
 app.include_router(swap_requests.router)
 app.include_router(messages.router)
 app.include_router(moderation.router)
+app.include_router(points.router)
+app.include_router(skills.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

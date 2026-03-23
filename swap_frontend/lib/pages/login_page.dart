@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:model_viewer_plus/model_viewer_plus.dart';
-import 'package:flutter/foundation.dart';
 import '../services/b2c_auth_service.dart';
 import 'signup_page.dart';
 import 'home_page.dart';
@@ -13,18 +12,7 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _email = TextEditingController();
-  final _password = TextEditingController();
   bool _loading = false;
-  bool _showPassword = false;
-
-  @override
-  void dispose() {
-    _email.dispose();
-    _password.dispose();
-    super.dispose();
-  }
 
   Future<void> _login() async {
     setState(() => _loading = true);
@@ -56,9 +44,6 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  // B2C handles all identity providers — _google redirects to the same flow
-  Future<void> _google() => _login();
-
   @override
   Widget build(BuildContext context) {
     final isWide = MediaQuery.of(context).size.width >= 900;
@@ -85,16 +70,8 @@ class _LoginPageState extends State<LoginPage> {
                           padding: const EdgeInsets.only(left: 32, right: 16),
                           child: Center(
                             child: _AuthCard(
-                              formKey: _formKey,
-                              email: _email,
-                              password: _password,
                               loading: _loading,
                               onLogin: _login,
-                              onGoogle: _google,
-                              showPassword: _showPassword,
-                              toggleShowPassword: () => setState(
-                                () => _showPassword = !_showPassword,
-                              ),
                             ),
                           ),
                         ),
@@ -121,15 +98,8 @@ class _LoginPageState extends State<LoginPage> {
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: _AuthCard(
-                        formKey: _formKey,
-                        email: _email,
-                        password: _password,
                         loading: _loading,
                         onLogin: _login,
-                        onGoogle: _google,
-                        showPassword: _showPassword,
-                        toggleShowPassword: () =>
-                            setState(() => _showPassword = !_showPassword),
                       ),
                     ),
                   );
@@ -167,24 +137,12 @@ class _LoginPageState extends State<LoginPage> {
 
 class _AuthCard extends StatelessWidget {
   const _AuthCard({
-    required this.formKey,
-    required this.email,
-    required this.password,
     required this.loading,
     required this.onLogin,
-    required this.onGoogle,
-    required this.showPassword,
-    required this.toggleShowPassword,
   });
 
-  final GlobalKey<FormState> formKey;
-  final TextEditingController email;
-  final TextEditingController password;
   final bool loading;
   final VoidCallback onLogin;
-  final VoidCallback onGoogle;
-  final bool showPassword;
-  final VoidCallback toggleShowPassword;
 
   @override
   Widget build(BuildContext context) {
