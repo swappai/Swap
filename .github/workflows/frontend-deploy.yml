@@ -12,7 +12,7 @@ on:
       - "swap_frontend/**"
 
 env:
-  FLUTTER_VERSION: "3.24.0"
+  FLUTTER_VERSION: "3.41.5"
   API_BASE_URL: "https://app-swapai-backend.azurewebsites.net"
   ENTRA_TENANT_NAME: "swapauth"
   ENTRA_REDIRECT_URI: "https://stwa-swap-dev.azurestaticapps.net/"
