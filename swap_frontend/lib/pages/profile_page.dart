@@ -4,10 +4,6 @@ import '../services/b2c_auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/skill_service.dart';
 import '../widgets/app_sidebar.dart';
-import '../services/portfolio_service.dart';
-import '../services/review_service.dart';
-import '../models/portfolio.dart';
-import '../models/review.dart';
 import 'home_page.dart';
 import 'post_skill_page.dart';
 import 'onboarding.dart';
@@ -622,7 +618,6 @@ class _SkillsSection extends StatefulWidget {
     required this.skillsToOffer,
     required this.servicesNeeded,
     required this.onPostFirst,
-    required this.uid,
   });
 
   final String uid;
@@ -630,45 +625,6 @@ class _SkillsSection extends StatefulWidget {
   final String skillsToOffer;
   final String servicesNeeded;
   final VoidCallback onPostFirst;
-  final String uid;
-
-  @override
-  State<_SkillsSection> createState() => _SkillsSectionState();
-}
-
-class _SkillsSectionState extends State<_SkillsSection> {
-  List<Map<String, dynamic>> _postedSkills = [];
-  bool _loading = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadPostedSkills();
-  }
-
-  Future<void> _loadPostedSkills() async {
-    debugPrint('Loading posted skills for uid: ${widget.uid}');
-    try {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('skills')
-          .where('creatorUid', isEqualTo: widget.uid)
-          .get();
-
-      debugPrint('Found ${snapshot.docs.length} skills for uid: ${widget.uid}');
-
-      if (mounted) {
-        setState(() {
-          _postedSkills = snapshot.docs.map((doc) => doc.data()).toList();
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint('Error loading posted skills: $e');
-      if (mounted) {
-        setState(() => _loading = false);
-      }
-    }
-  }
 
   @override
   State<_SkillsSection> createState() => _SkillsSectionState();
@@ -867,22 +823,6 @@ class _SkillCardItem extends StatelessWidget {
       ),
     );
   }
-
-  static Widget _smallChip(String text) {
-    if (text.isEmpty) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: HomePage.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: HomePage.line),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: HomePage.textMuted, fontSize: 11),
-      ),
-    );
-  }
 }
 
 class _SectionCard extends StatelessWidget {
@@ -1057,368 +997,31 @@ class _EmptySkills extends StatelessWidget {
   }
 }
 
-class _ReviewsSection extends StatefulWidget {
-  const _ReviewsSection({required this.uid});
-  final String uid;
-
-  @override
-  State<_ReviewsSection> createState() => _ReviewsSectionState();
-}
-
-class _ReviewsSectionState extends State<_ReviewsSection> {
-  final _reviewService = ReviewService();
-  List<Review>? _reviews;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadReviews();
-  }
-
-  Future<void> _loadReviews() async {
-    try {
-      final response = await _reviewService.getUserReviews(widget.uid, limit: 10);
-      if (mounted) {
-        setState(() {
-          _reviews = response.reviews;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
-    }
-  }
+class _ReviewsPlaceholder extends StatelessWidget {
+  const _ReviewsPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return _SectionCard(
-        title: 'Reviews',
-        child: Text(
-          'Unable to load reviews.',
-          style: const TextStyle(color: HomePage.textMuted),
-        ),
-      );
-    }
-
-    if (_reviews == null || _reviews!.isEmpty) {
-      return _SectionCard(
-        title: 'Reviews',
-        child: const Text(
-          'No reviews yet.',
-          style: TextStyle(color: HomePage.textMuted),
-        ),
-      );
-    }
-
-    return Column(
-      children: _reviews!.map((review) => _ReviewCard(review: review)).toList(),
-    );
-  }
-}
-
-class _ReviewCard extends StatelessWidget {
-  const _ReviewCard({required this.review});
-  final Review review;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: HomePage.surfaceAlt,
-                  backgroundImage: review.reviewerPhoto != null
-                      ? NetworkImage(review.reviewerPhoto!)
-                      : null,
-                  child: review.reviewerPhoto == null
-                      ? Text(
-                          (review.reviewerName ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: HomePage.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        review.reviewerName ?? 'Anonymous',
-                        style: const TextStyle(
-                          color: HomePage.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (review.skillExchanged != null)
-                        Text(
-                          review.skillExchanged!,
-                          style: const TextStyle(
-                            color: HomePage.textMuted,
-                            fontSize: 13,
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
-                Row(
-                  children: List.generate(
-                    5,
-                    (i) => Icon(
-                      i < review.rating ? Icons.star : Icons.star_border,
-                      size: 18,
-                      color: const Color(0xFFF59E0B),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Text(
-                review.reviewText!,
-                style: const TextStyle(color: HomePage.textPrimary),
-              ),
-            ],
-          ],
-        ),
+    return _SectionCard(
+      title: 'Reviews',
+      child: const Text(
+        'No reviews yet.',
+        style: TextStyle(color: HomePage.textMuted),
       ),
     );
   }
 }
 
-class _ActivitySection extends StatefulWidget {
-  const _ActivitySection({required this.uid});
-  final String uid;
-
-  @override
-  State<_ActivitySection> createState() => _ActivitySectionState();
-}
-
-class _ActivitySectionState extends State<_ActivitySection> {
-  final _portfolioService = PortfolioService();
-  List<CompletedSwapSummary>? _swaps;
-  bool _loading = true;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadActivity();
-  }
-
-  Future<void> _loadActivity() async {
-    try {
-      final portfolio = await _portfolioService.getPortfolio(
-        widget.uid,
-        includeSwaps: true,
-        includeReviews: false,
-        swapLimit: 10,
-      );
-      if (mounted) {
-        setState(() {
-          _swaps = portfolio.recentSwaps;
-          _loading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _loading = false;
-        });
-      }
-    }
-  }
+class _ActivityPlaceholder extends StatelessWidget {
+  const _ActivityPlaceholder();
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return _SectionCard(
-        title: 'Recent Activity',
-        child: Text(
-          'Unable to load activity.',
-          style: const TextStyle(color: HomePage.textMuted),
-        ),
-      );
-    }
-
-    if (_swaps == null || _swaps!.isEmpty) {
-      return _SectionCard(
-        title: 'Recent Activity',
-        child: const Text(
-          'No recent activity.',
-          style: TextStyle(color: HomePage.textMuted),
-        ),
-      );
-    }
-
-    return Column(
-      children: _swaps!.map((swap) => _ActivityCard(swap: swap)).toList(),
-    );
-  }
-}
-
-class _ActivityCard extends StatelessWidget {
-  const _ActivityCard({required this.swap});
-  final CompletedSwapSummary swap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: HomePage.surfaceAlt,
-                  backgroundImage: swap.partnerPhoto != null
-                      ? NetworkImage(swap.partnerPhoto!)
-                      : null,
-                  child: swap.partnerPhoto == null
-                      ? Text(
-                          (swap.partnerName ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(
-                            color: HomePage.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        )
-                      : null,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Swap with ${swap.partnerName ?? "Unknown"}',
-                        style: const TextStyle(
-                          color: HomePage.textPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      Text(
-                        '${swap.hoursExchanged.toStringAsFixed(1)} hours exchanged',
-                        style: const TextStyle(
-                          color: HomePage.textMuted,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withValues(alpha:0.15),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Text(
-                    'Completed',
-                    style: TextStyle(
-                      color: Color(0xFF22C55E),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                if (swap.skillTaught != null) ...[
-                  Expanded(
-                    child: _skillPill(
-                      'Offered: ${swap.skillTaught!}',
-                      const Color(0xFF7C3AED),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                if (swap.skillLearned != null)
-                  Expanded(
-                    child: _skillPill(
-                      'Received: ${swap.skillLearned!}',
-                      const Color(0xFF0EA5E9),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _skillPill(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha:0.15),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        overflow: TextOverflow.ellipsis,
+    return _SectionCard(
+      title: 'Recent Activity',
+      child: const Text(
+        'No recent activity.',
+        style: TextStyle(color: HomePage.textMuted),
       ),
     );
   }

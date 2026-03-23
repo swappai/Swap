@@ -1,8 +1,6 @@
-// Models for swap requests.
+/// Models for swap requests.
 
 enum SwapRequestStatus { pending, accepted, declined, cancelled, completed }
-
-enum SwapType { direct, indirect }
 
 /// Minimal profile info for swap request participants.
 class SwapParticipant {
@@ -39,11 +37,8 @@ class SwapRequest {
   final String requesterUid;
   final String recipientUid;
   final SwapRequestStatus status;
-  final SwapType swapType;
-  final String? requesterOffer;
+  final String requesterOffer;
   final String requesterNeed;
-  final int? pointsOffered;
-  final int? pointsReserved;
   final String? message;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -61,11 +56,8 @@ class SwapRequest {
     required this.requesterUid,
     required this.recipientUid,
     required this.status,
-    this.swapType = SwapType.direct,
-    this.requesterOffer,
+    required this.requesterOffer,
     required this.requesterNeed,
-    this.pointsOffered,
-    this.pointsReserved,
     this.message,
     required this.createdAt,
     required this.updatedAt,
@@ -84,11 +76,8 @@ class SwapRequest {
         requesterUid: json['requester_uid'] as String? ?? '',
         recipientUid: json['recipient_uid'] as String? ?? '',
         status: _parseStatus(json['status'] as String?),
-        swapType: _parseSwapType(json['swap_type'] as String?),
-        requesterOffer: json['requester_offer'] as String?,
+        requesterOffer: json['requester_offer'] as String? ?? '',
         requesterNeed: json['requester_need'] as String? ?? '',
-        pointsOffered: json['points_offered'] as int?,
-        pointsReserved: json['points_reserved'] as int?,
         message: json['message'] as String?,
         createdAt: json['created_at'] != null
             ? DateTime.parse(json['created_at'] as String)
@@ -129,25 +118,13 @@ class SwapRequest {
     }
   }
 
-  static SwapType _parseSwapType(String? type) {
-    switch (type) {
-      case 'indirect':
-        return SwapType.indirect;
-      default:
-        return SwapType.direct;
-    }
-  }
-
   Map<String, dynamic> toJson() => {
         'id': id,
         'requester_uid': requesterUid,
         'recipient_uid': recipientUid,
         'status': status.name,
-        'swap_type': swapType.name,
         'requester_offer': requesterOffer,
         'requester_need': requesterNeed,
-        'points_offered': pointsOffered,
-        'points_reserved': pointsReserved,
         'message': message,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
@@ -158,12 +135,6 @@ class SwapRequest {
         'requester_offer_skill_id': requesterOfferSkillId,
         'requester_need_skill_id': requesterNeedSkillId,
       };
-
-  /// Whether this is a direct skill exchange.
-  bool get isDirect => swapType == SwapType.direct;
-
-  /// Whether this is an indirect (points-based) swap.
-  bool get isIndirect => swapType == SwapType.indirect;
 
   /// Whether this request is pending and awaiting a response.
   bool get isPending => status == SwapRequestStatus.pending;

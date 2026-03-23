@@ -18,7 +18,6 @@ class SearchResult {
   final int swapCredits;
   final int swapsCompleted;
   final double score;
-  final String? photoUrl;
 
   SearchResult({
     required this.uid,
@@ -31,7 +30,6 @@ class SearchResult {
     required this.swapCredits,
     required this.swapsCompleted,
     required this.score,
-    this.photoUrl,
   });
 
   factory SearchResult.fromJson(Map<String, dynamic> j) => SearchResult(
@@ -52,7 +50,6 @@ class SearchResult {
     score: (j['score'] is num)
         ? (j['score'] as num).toDouble()
         : double.tryParse('${j['score']}') ?? 0.0,
-    photoUrl: j['photo_url'] as String? ?? j['photoUrl'] as String?,
   );
 }
 

@@ -18,12 +18,12 @@ class ForgotPasswordPage extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 420),
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha:0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withValues(alpha:0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha:0.6),
+                  color: Colors.black.withValues(alpha: 0.6),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),

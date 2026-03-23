@@ -36,14 +36,11 @@ class SwapRequestService {
   }
 
   /// Create a new swap request.
-  /// 
-  /// For direct swaps: provide requesterOffer (the skill you're offering).
-  /// For indirect swaps: provide pointsOffered (points to pay for the service).
   Future<SwapRequest> createRequest({
     required String requesterUid,
     required String recipientUid,
+    required String requesterOffer,
     required String requesterNeed,
-    String? requesterOffer,
     String? message,
     String? requesterOfferSkillId,
     String? requesterNeedSkillId,
@@ -52,11 +49,12 @@ class SwapRequestService {
       queryParameters: {'requester_uid': requesterUid},
     );
 
-    debugPrint('SwapRequestService: POST $uri (swapType: ${swapType.name})');
+    debugPrint('SwapRequestService: POST $uri');
 
     final headers = await _getHeaders();
     final body = jsonEncode({
       'recipient_uid': recipientUid,
+      'requester_offer': requesterOffer,
       'requester_need': requesterNeed,
       if (message != null && message.isNotEmpty) 'message': message,
       if (requesterOfferSkillId != null)
@@ -240,123 +238,5 @@ class SwapRequestService {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return SwapRequest.fromJson(data);
-  }
-
-  /// Mark a swap as complete.
-  Future<SwapRequest> markComplete({
-    required String requestId,
-    required String uid,
-    required double hoursExchanged,
-    required String skillLevel,
-    String? notes,
-  }) async {
-    final uri = Uri.parse('$baseUrl/swaps/$requestId/complete')
-        .replace(queryParameters: {'uid': uid});
-
-    debugPrint('SwapRequestService: POST $uri (marking complete with $hoursExchanged hours)');
-
-    final headers = await _getHeaders();
-    final body = jsonEncode({
-      'hours_exchanged': hoursExchanged,
-      'skill_level': skillLevel,
-      if (notes != null && notes.isNotEmpty) 'notes': notes,
-    });
-
-    final response = await http
-        .post(uri, headers: headers, body: body)
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      final errorBody = response.body;
-      throw Exception(
-          'Failed to mark complete: ${response.statusCode} $errorBody');
-    }
-
-    // The completion endpoint returns SwapCompletionStatus, but we need
-    // the full SwapRequest. Fetch it again to get the updated data.
-    return await getRequest(requestId, uid);
-  }
-
-  /// Verify or dispute a swap completion.
-  Future<SwapRequest> verifyCompletion({
-    required String requestId,
-    required String uid,
-    required bool verify,
-    String? disputeReason,
-  }) async {
-    final uri = Uri.parse('$baseUrl/swaps/$requestId/verify')
-        .replace(queryParameters: {'uid': uid});
-
-    debugPrint('SwapRequestService: POST $uri (verify: $verify)');
-
-    final headers = await _getHeaders();
-    final body = jsonEncode({
-      'action': verify ? 'verify' : 'dispute',
-      if (!verify && disputeReason != null) 'dispute_reason': disputeReason,
-    });
-
-    final response = await http
-        .post(uri, headers: headers, body: body)
-        .timeout(const Duration(seconds: 15));
-
-    if (response.statusCode != 200) {
-      final errorBody = response.body;
-      throw Exception(
-          'Failed to verify completion: ${response.statusCode} $errorBody');
-    }
-
-    // The verify endpoint returns SwapCompletionStatus, but we need
-    // the full SwapRequest. Fetch it again to get the updated data.
-    return await getRequest(requestId, uid);
-  }
-
-  /// Get completion status for a swap.
-  Future<Map<String, dynamic>> getCompletionStatus(
-      String requestId, String uid) async {
-    final uri = Uri.parse('$baseUrl/swaps/$requestId/completion-status')
-        .replace(queryParameters: {'uid': uid});
-
-    debugPrint('SwapRequestService: GET $uri');
-
-    final headers = await _getHeaders();
-    final response = await http.get(uri, headers: headers).timeout(
-          const Duration(seconds: 15),
-        );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-          'Failed to get completion status: ${response.statusCode} ${response.reasonPhrase}');
-    }
-
-    return jsonDecode(response.body) as Map<String, dynamic>;
-  }
-
-  /// Get completed swaps for the user.
-  Future<List<SwapRequest>> getCompletedSwaps(String uid,
-      {int limit = 20}) async {
-    final uri = Uri.parse('$baseUrl/swaps/completed').replace(
-      queryParameters: {
-        'uid': uid,
-        'limit': limit.toString(),
-      },
-    );
-
-    debugPrint('SwapRequestService: GET $uri');
-
-    final headers = await _getHeaders();
-    final response = await http.get(uri, headers: headers).timeout(
-          const Duration(seconds: 15),
-        );
-
-    if (response.statusCode != 200) {
-      throw Exception(
-          'Failed to get completed swaps: ${response.statusCode} ${response.reasonPhrase}');
-    }
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    final swaps = data['completed_swaps'] as List<dynamic>? ?? [];
-    return swaps
-        .map((e) => SwapRequest.fromJson(e as Map<String, dynamic>))
-        .toList();
   }
 }

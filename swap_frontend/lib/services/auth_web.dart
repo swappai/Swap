@@ -1,29 +1,28 @@
-/// Web-specific auth helpers using dart:html.
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:html' as html;
+// Web-specific auth helpers using package:web.
+import 'package:web/web.dart' as web;
 
 void redirectTo(String url) {
-  html.window.location.assign(url);
+  web.window.location.assign(url);
 }
 
 String? getAuthCode() {
-  final uri = Uri.parse(html.window.location.href);
+  final uri = Uri.parse(web.window.location.href);
   return uri.queryParameters['code'];
 }
 
 void clearUrlParams() {
-  final base = html.window.location.origin! + html.window.location.pathname!;
-  html.window.history.replaceState(null, '', base);
+  final base = web.window.location.origin + web.window.location.pathname;
+  web.window.history.replaceState(null, '', base);
 }
 
 void storeVerifier(String verifier) {
-  html.window.localStorage['entra_code_verifier'] = verifier;
+  web.window.localStorage.setItem('entra_code_verifier', verifier);
 }
 
 String? readVerifier() {
-  return html.window.localStorage['entra_code_verifier'];
+  return web.window.localStorage.getItem('entra_code_verifier');
 }
 
 void clearVerifier() {
-  html.window.localStorage.remove('entra_code_verifier');
+  web.window.localStorage.removeItem('entra_code_verifier');
 }

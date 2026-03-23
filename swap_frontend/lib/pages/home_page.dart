@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'landing_page.dart';
 import 'profile_page.dart';
 import '../services/search_service.dart';
@@ -413,13 +412,6 @@ class _CategoryChip extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  State<_CategoryChip> createState() => _CategoryChipState();
-}
-
-class _CategoryChipState extends State<_CategoryChip> {
-  bool _hovering = false;
-
-  @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
@@ -608,7 +600,6 @@ class _SkillCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                       ),
                     ),
-                    child: const Text('Swap', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
                   ),
                 ],
               ),

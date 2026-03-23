@@ -3,9 +3,6 @@ import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
 import 'home_page.dart';
 import '../widgets/app_sidebar.dart';
-import '../config/app_config.dart';
-
-final String _apiBaseUrl = AppConfig.apiBaseUrl;
 
 // Color palette used throughout the page
 const Color backgroundColor = Color(0xFF0F0F11);
@@ -116,30 +113,6 @@ class _PostSkillPageState extends State<PostSkillPage> {
         'deliverables': _deliverables,
       });
 
-      // Also add to user's profile skillsToOffer so it appears in swap dialogs
-      await FirebaseFirestore.instance.collection('profiles').doc(user.uid).set({
-        'skillsToOffer': FieldValue.arrayUnion([
-          {
-            'name': _titleController.text.trim(),
-            'level': _difficulty,
-            'category': _category,
-          }
-        ]),
-      }, SetOptions(merge: true));
-
-      // Trigger Azure Search reindex for this user
-      try {
-        await http.post(
-          Uri.parse('$_apiBaseUrl/search/reindex-user'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({'uid': user.uid}),
-        );
-        debugPrint('✅ User reindexed for search');
-      } catch (e) {
-        // Don't fail the whole operation if reindex fails
-        debugPrint('⚠️ Failed to reindex user for search: $e');
-      }
-
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -170,7 +143,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
       scaffoldBackgroundColor: backgroundColor,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: cardColor.withValues(alpha:.6),
+        fillColor: cardColor.withValues(alpha: .6),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -335,8 +308,8 @@ class _PostSkillPageState extends State<PostSkillPage> {
                                                                     .disabled,
                                                               )
                                                               ? accentPurple
-                                                                    .withValues(alpha:
-                                                                      0.45,
+                                                                    .withValues(
+                                                                      alpha: 0.45,
                                                                     )
                                                               : accentPurple,
                                                         ),
@@ -498,7 +471,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
                                                         WidgetState.disabled,
                                                       )
                                                       ? accentPurple
-                                                            .withValues(alpha:0.45)
+                                                            .withValues(alpha: 0.45)
                                                       : accentPurple,
                                                 ),
                                             foregroundColor:
@@ -787,7 +760,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: cardColor.withValues(alpha:.8),
+                    color: cardColor.withValues(alpha: .8),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -879,7 +852,7 @@ class DropdownField<T> extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: cardColor.withValues(alpha:.65),
+        color: cardColor.withValues(alpha: .65),
         border: Border.all(color: Colors.white12),
       ),
       child: DropdownButtonHideUnderline(
@@ -1225,7 +1198,7 @@ class PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: cardColor.withValues(alpha:.9),
+      color: cardColor.withValues(alpha: .9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),

@@ -74,7 +74,7 @@ class _SignUpPageState extends State<SignUpPage> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: const Color(0xFF0D0D0D),
       body: SafeArea(
         child: Stack(
           children: [
@@ -111,13 +111,13 @@ class _SignUpPageState extends State<SignUpPage> {
     return Container(
       constraints: const BoxConstraints(maxWidth: 420),
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0C),
+        color: Colors.black.withValues(alpha: 0.4),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFF27272A)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF7C3AED).withValues(alpha:0.1),
-            blurRadius: 40,
+            color: Colors.black.withValues(alpha: 0.6),
+            blurRadius: 20,
             offset: const Offset(0, 8),
           ),
         ],
@@ -237,7 +237,7 @@ class _Rainbow3DPanel extends StatelessWidget {
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: Color(0x407C3AED),
+                color: Color(0x407A00FF),
                 blurRadius: 100,
                 spreadRadius: 12,
               ),

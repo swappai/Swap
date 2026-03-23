@@ -1,4 +1,4 @@
-/// Stub implementations for non-web platforms.
+// Stub implementations for non-web platforms.
 
 void redirectTo(String url) {
   throw UnsupportedError('redirectTo is only supported on web');

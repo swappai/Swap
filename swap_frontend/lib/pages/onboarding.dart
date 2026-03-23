@@ -1,7 +1,6 @@
 // lib/pages/profile_setup_flow.dart
-import 'dart:typed_data';
+import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:async'; // for TimeoutException
 import 'package:image_picker/image_picker.dart';
 import '../services/b2c_auth_service.dart';
@@ -53,9 +52,6 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
   bool _dmOpen = true;
   bool _emailUpdates = true;
   bool _showCity = false;
-
-  // Submission state
-  bool _submitting = false;
 
   // sample options
   static const _skillCategories = <String>[
@@ -129,13 +125,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
       source: ImageSource.gallery,
       imageQuality: 85,
     );
-    if (x != null) {
-      final bytes = await x.readAsBytes();
-      setState(() {
-        _avatarBytes = bytes;
-        _avatarName = x.name;
-      });
-    }
+    if (x != null) setState(() => _avatar = File(x.path));
   }
 
   void _next() {
@@ -156,16 +146,12 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
   }
 
   Future<void> _submit() async {
-    if (_submitting) return; // Prevent double submission
-    setState(() => _submitting = true);
-
     try {
       final user = B2CAuthService.instance.currentUser;
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Error: No user is signed in')),
         );
-        setState(() => _submitting = false);
         return;
       }
 
@@ -214,7 +200,6 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
     } catch (e, stackTrace) {
       debugPrint('Error in _submit: $e\n$stackTrace');
       if (!mounted) return;
-      setState(() => _submitting = false);
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
@@ -355,7 +340,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                                 timezones: _timezones,
                                 onTimezoneChanged: (v) =>
                                     setState(() => _timezone = v),
-                                avatarBytes: _avatarBytes,
+                                avatar: _avatar,
                                 existingPhotoUrl: _existingPhotoUrl,
                                 onPickAvatar: _pickAvatar,
                               ),
@@ -416,29 +401,18 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                     child: Row(
                       children: [
                         OutlinedButton.icon(
-                          onPressed: _submitting ? null : _back,
+                          onPressed: _back,
                           icon: const Icon(Icons.arrow_back),
                           label: const Text('Back'),
                         ),
                         const Spacer(),
                         FilledButton.icon(
-                          onPressed: _submitting ? null : _next,
-                          icon: _submitting
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                              : Icon(
-                                  _step < 3 ? Icons.arrow_forward : Icons.check,
-                                ),
+                          onPressed: _next,
+                          icon: Icon(
+                            _step < 3 ? Icons.arrow_forward : Icons.check,
+                          ),
                           label: Text(
-                            _submitting
-                                ? 'Saving...'
-                                : (_step < 3 ? 'Continue' : 'Complete Setup'),
+                            _step < 3 ? 'Continue' : 'Complete Setup',
                           ),
                         ),
                       ],
@@ -551,7 +525,7 @@ class _StepProfile extends StatelessWidget {
     required this.timezone,
     required this.timezones,
     required this.onTimezoneChanged,
-    required this.avatarBytes,
+    required this.avatar,
     required this.existingPhotoUrl,
     required this.onPickAvatar,
   });
@@ -560,8 +534,8 @@ class _StepProfile extends StatelessWidget {
   Widget build(BuildContext context) {
     // decide which image to preview
     ImageProvider? previewProvider;
-    if (avatarBytes != null) {
-      previewProvider = MemoryImage(avatarBytes!);
+    if (avatar != null) {
+      previewProvider = FileImage(avatar!);
     } else if (existingPhotoUrl != null && existingPhotoUrl!.isNotEmpty) {
       previewProvider = NetworkImage(existingPhotoUrl!);
     }

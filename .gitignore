@@ -4,3 +4,4 @@
 # Environment files (never commit secrets)
 .env
 .env.*
+.github/.DS_Store

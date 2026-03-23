@@ -5,8 +5,6 @@ import 'package:http/http.dart' as http;
 import '../config.dart';
 import 'b2c_auth_service.dart';
 
-import '../config/app_config.dart';
-
 class ProfileService {
   final String baseUrl;
   ProfileService({String? baseUrl})
