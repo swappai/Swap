@@ -63,7 +63,7 @@ class _AppSidebarState extends State<AppSidebar> {
       decoration: BoxDecoration(
         color: bg,
         border: Border(
-          right: BorderSide(color: border.withOpacity(0.5)),
+          right: BorderSide(color: border.withValues(alpha:0.5)),
         ),
       ),
       child: Column(
@@ -83,7 +83,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ),
           ),
           
-          Divider(color: border.withOpacity(0.5), height: 1),
+          Divider(color: border.withValues(alpha:0.5), height: 1),
           const SizedBox(height: 16),
 
           // Navigation items
@@ -166,13 +166,13 @@ class _AppSidebarState extends State<AppSidebar> {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    accent.withOpacity(0.15),
+                    accent.withValues(alpha:0.15),
                     surface,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: accent.withOpacity(0.2)),
+                border: Border.all(color: accent.withValues(alpha:0.2)),
                 borderRadius: BorderRadius.circular(16),
               ),
               padding: const EdgeInsets.all(18),
@@ -286,13 +286,13 @@ class _NavItemState extends State<_NavItem> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: isActive 
-                ? AppSidebar.accent.withOpacity(0.15)
+                ? AppSidebar.accent.withValues(alpha:0.15)
                 : _hovering 
                     ? AppSidebar.surface
                     : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: isActive 
-                ? Border.all(color: AppSidebar.accent.withOpacity(0.3))
+                ? Border.all(color: AppSidebar.accent.withValues(alpha:0.3))
                 : null,
           ),
           child: Row(
@@ -376,7 +376,7 @@ class _GradientButtonState extends State<_GradientButton> {
             borderRadius: BorderRadius.circular(10),
             boxShadow: [
               BoxShadow(
-                color: AppSidebar.accent.withOpacity(_hovering ? 0.5 : 0.3),
+                color: AppSidebar.accent.withValues(alpha:_hovering ? 0.5 : 0.3),
                 blurRadius: _hovering ? 16 : 8,
                 offset: const Offset(0, 4),
               ),

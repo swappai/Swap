@@ -1363,7 +1363,7 @@ class _ActivityCard extends StatelessWidget {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withOpacity(0.15),
+                    color: const Color(0xFF22C55E).withValues(alpha:0.15),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Text(
@@ -1408,7 +1408,7 @@ class _ActivityCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(

@@ -1,4 +1,4 @@
-/// Models for reviews.
+// Models for reviews.
 
 /// A review for a completed swap.
 class Review {

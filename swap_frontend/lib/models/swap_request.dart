@@ -1,6 +1,8 @@
-/// Models for swap requests.
+// Models for swap requests.
 
 enum SwapRequestStatus { pending, accepted, declined, cancelled, completed }
+
+enum SwapType { direct, indirect }
 
 /// Minimal profile info for swap request participants.
 class SwapParticipant {

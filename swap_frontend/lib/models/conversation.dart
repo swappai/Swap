@@ -1,4 +1,4 @@
-/// Models for messaging conversations and messages.
+// Models for messaging conversations and messages.
 
 enum MessageType { text, system }
 

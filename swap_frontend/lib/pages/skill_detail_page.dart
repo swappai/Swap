@@ -258,7 +258,7 @@ class _SkillDetailPageState extends State<SkillDetailPage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: HomePage.accent.withOpacity(0.1),
+                  color: HomePage.accent.withValues(alpha:0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text('View Profile →', style: TextStyle(color: HomePage.accent, fontSize: 12, fontWeight: FontWeight.w600)),
@@ -358,9 +358,9 @@ class _SkillDetailPageState extends State<SkillDetailPage> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: HomePage.accent.withOpacity(0.1),
+              color: HomePage.accent.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: HomePage.accent.withOpacity(0.3)),
+              border: Border.all(color: HomePage.accent.withValues(alpha:0.3)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -511,7 +511,7 @@ class _SkillDetailPageState extends State<SkillDetailPage> {
                 height: 60,
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [HomePage.accent, HomePage.accent.withOpacity(0.6)],
+                    colors: [HomePage.accent, HomePage.accent.withValues(alpha:0.6)],
                   ),
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 ),
@@ -609,7 +609,7 @@ class _SkillDetailPageState extends State<SkillDetailPage> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22C55E).withOpacity(0.1),
+                    color: const Color(0xFF22C55E).withValues(alpha:0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -667,7 +667,7 @@ class _SkillDetailPageState extends State<SkillDetailPage> {
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF22C55E).withOpacity(0.15),
+                                      color: const Color(0xFF22C55E).withValues(alpha:0.15),
                                       borderRadius: BorderRadius.circular(12),
                                     ),
                                     child: const Text('Completed', style: TextStyle(color: Color(0xFF22C55E), fontSize: 11, fontWeight: FontWeight.w600)),
@@ -767,7 +767,7 @@ class _Pill extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: c.withOpacity(0.15),
+        color: c.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -874,7 +874,7 @@ class _SwapBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(label, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500)),

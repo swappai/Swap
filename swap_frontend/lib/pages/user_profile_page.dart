@@ -850,7 +850,7 @@ class _SwapRequestDialogState extends State<SwapRequestDialog> {
                   decoration: BoxDecoration(
                     color: HomePage.surfaceAlt,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: HomePage.accent.withOpacity(0.5)),
+                    border: Border.all(color: HomePage.accent.withValues(alpha:0.5)),
                   ),
                   child: Row(
                     children: [
@@ -918,9 +918,9 @@ class _SwapRequestDialogState extends State<SwapRequestDialog> {
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.orange.withOpacity(0.1),
+                      color: Colors.orange.withValues(alpha:0.1),
                       borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                      border: Border.all(color: Colors.orange.withValues(alpha:0.3)),
                     ),
                     child: Column(
                       children: [
@@ -987,7 +987,7 @@ class _SwapRequestDialogState extends State<SwapRequestDialog> {
                   decoration: BoxDecoration(
                     color: HomePage.surfaceAlt,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: HomePage.accentAlt.withOpacity(0.5)),
+                    border: Border.all(color: HomePage.accentAlt.withValues(alpha:0.5)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -1149,7 +1149,7 @@ class _SwapTypeOption extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         decoration: BoxDecoration(
-          color: selected ? HomePage.accent.withOpacity(0.15) : Colors.transparent,
+          color: selected ? HomePage.accent.withValues(alpha:0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
           border: selected
               ? Border.all(color: HomePage.accent, width: 2)
@@ -1408,7 +1408,7 @@ class _SwapRequestHistoryCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E).withOpacity(0.15),
+                  color: const Color(0xFF22C55E).withValues(alpha:0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Text(
@@ -1444,7 +1444,7 @@ class _SwapRequestHistoryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(

@@ -434,9 +434,9 @@ class _SwapRequestCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
+        color: color.withValues(alpha:0.15),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.4)),
+        border: Border.all(color: color.withValues(alpha:0.4)),
       ),
       child: Text(
         status.name.toUpperCase(),
@@ -472,7 +472,7 @@ class _Badge extends StatelessWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: bg.withOpacity(0.6)),
+        border: Border.all(color: bg.withValues(alpha:0.6)),
       ),
       child: Row(
         children: [

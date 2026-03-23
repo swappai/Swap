@@ -204,7 +204,7 @@ class _ConversationsPageState extends State<ConversationsPage> {
           Icon(
             Icons.chat_bubble_outline,
             size: 64,
-            color: HomePage.textMuted.withOpacity(0.5),
+            color: HomePage.textMuted.withValues(alpha:0.5),
           ),
           const SizedBox(height: 16),
           const Text(

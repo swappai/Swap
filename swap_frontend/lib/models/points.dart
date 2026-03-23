@@ -1,4 +1,4 @@
-/// Models for the swap points & credits system.
+// Models for the swap points & credits system.
 
 enum PointsTransactionType { earned, spent }
 

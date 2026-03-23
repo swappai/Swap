@@ -600,7 +600,7 @@ class _SwapRequestCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: HomePage.surfaceAlt.withOpacity(0.5),
+                  color: HomePage.surfaceAlt.withValues(alpha:0.5),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: HomePage.line),
                 ),
@@ -690,7 +690,7 @@ class _ActiveSwapCard extends StatelessWidget {
       color: HomePage.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.accentAlt.withOpacity(0.5)),
+        side: BorderSide(color: HomePage.accentAlt.withValues(alpha:0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -826,7 +826,7 @@ class _CompletedSwapCard extends StatelessWidget {
       color: HomePage.surface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.green.withOpacity(0.5)),
+        side: BorderSide(color: Colors.green.withValues(alpha:0.5)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -872,7 +872,7 @@ class _CompletedSwapCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.2),
+                    color: Colors.green.withValues(alpha:0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: const Row(
@@ -1003,8 +1003,8 @@ class _SwapTypeBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: isDirect
-            ? HomePage.accent.withOpacity(0.2)
-            : HomePage.accentAlt.withOpacity(0.2),
+            ? HomePage.accent.withValues(alpha:0.2)
+            : HomePage.accentAlt.withValues(alpha:0.2),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Row(
@@ -1058,7 +1058,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
+        color: color.withValues(alpha:0.2),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(

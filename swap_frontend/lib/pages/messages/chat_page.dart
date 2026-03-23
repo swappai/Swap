@@ -903,7 +903,7 @@ class _ChatPageState extends State<ChatPage> {
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: color.withOpacity(0.1),
+      color: color.withValues(alpha:0.1),
       child: Row(
         children: [
           Icon(icon, color: color, size: 24),
@@ -944,14 +944,14 @@ class _ChatPageState extends State<ChatPage> {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            const Color(0xFF22C55E).withOpacity(0.15),
-            const Color(0xFF10B981).withOpacity(0.1),
+            const Color(0xFF22C55E).withValues(alpha:0.15),
+            const Color(0xFF10B981).withValues(alpha:0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         border: Border(
-          bottom: BorderSide(color: const Color(0xFF22C55E).withOpacity(0.3)),
+          bottom: BorderSide(color: const Color(0xFF22C55E).withValues(alpha:0.3)),
         ),
       ),
       child: Column(
@@ -962,7 +962,7 @@ class _ChatPageState extends State<ChatPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF22C55E).withOpacity(0.2),
+                  color: const Color(0xFF22C55E).withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: const Icon(
@@ -998,8 +998,8 @@ class _ChatPageState extends State<ChatPage> {
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: swapType == SwapType.direct
-                      ? HomePage.accent.withOpacity(0.2)
-                      : HomePage.accentAlt.withOpacity(0.2),
+                      ? HomePage.accent.withValues(alpha:0.2)
+                      : HomePage.accentAlt.withValues(alpha:0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(

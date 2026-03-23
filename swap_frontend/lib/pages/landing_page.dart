@@ -132,8 +132,8 @@ class _AnimatedBlurBackgroundState extends State<_AnimatedBlurBackground>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        LandingPage.accent.withOpacity(0.4),
-                        LandingPage.accent.withOpacity(0.15),
+                        LandingPage.accent.withValues(alpha:0.4),
+                        LandingPage.accent.withValues(alpha:0.15),
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.4, 1.0],
@@ -158,8 +158,8 @@ class _AnimatedBlurBackgroundState extends State<_AnimatedBlurBackground>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        LandingPage.accentLight.withOpacity(0.3),
-                        LandingPage.accentLight.withOpacity(0.1),
+                        LandingPage.accentLight.withValues(alpha:0.3),
+                        LandingPage.accentLight.withValues(alpha:0.1),
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.5, 1.0],
@@ -184,8 +184,8 @@ class _AnimatedBlurBackgroundState extends State<_AnimatedBlurBackground>
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
                       colors: [
-                        const Color(0xFF3B82F6).withOpacity(0.2),
-                        const Color(0xFF3B82F6).withOpacity(0.05),
+                        const Color(0xFF3B82F6).withValues(alpha:0.2),
+                        const Color(0xFF3B82F6).withValues(alpha:0.05),
                         Colors.transparent,
                       ],
                       stops: const [0.0, 0.5, 1.0],
@@ -337,7 +337,7 @@ class _GlowButtonState extends State<_GlowButton> {
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: LandingPage.accent.withOpacity(_hovering ? 0.5 : 0.3),
+                color: LandingPage.accent.withValues(alpha:_hovering ? 0.5 : 0.3),
                 blurRadius: _hovering ? 24 : 16,
                 spreadRadius: _hovering ? 2 : 0,
                 offset: const Offset(0, 4),
@@ -384,9 +384,9 @@ class _HeroSection extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
-                color: LandingPage.accent.withOpacity(0.1),
+                color: LandingPage.accent.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(100),
-                border: Border.all(color: LandingPage.accent.withOpacity(0.3)),
+                border: Border.all(color: LandingPage.accent.withValues(alpha:0.3)),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -399,7 +399,7 @@ class _HeroSection extends StatelessWidget {
                       shape: BoxShape.circle,
                       boxShadow: [
                         BoxShadow(
-                          color: LandingPage.accent.withOpacity(0.6),
+                          color: LandingPage.accent.withValues(alpha:0.6),
                           blurRadius: 8,
                         ),
                       ],
@@ -523,7 +523,7 @@ class _GhostButtonState extends State<_GhostButton> {
             color: _hovering ? LandingPage.surfaceAlt : Colors.transparent,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: _hovering ? LandingPage.border : LandingPage.border.withOpacity(0.6),
+              color: _hovering ? LandingPage.border : LandingPage.border.withValues(alpha:0.6),
             ),
           ),
           child: Row(
@@ -560,9 +560,9 @@ class _StatsRow extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 32, horizontal: isWide ? 40 : 20),
         decoration: BoxDecoration(
-          color: LandingPage.surfaceAlt.withOpacity(0.5),
+          color: LandingPage.surfaceAlt.withValues(alpha:0.5),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: LandingPage.border.withOpacity(0.5)),
+          border: Border.all(color: LandingPage.border.withValues(alpha:0.5)),
         ),
         child: isWide
             ? Row(
@@ -767,11 +767,11 @@ class _StepCardState extends State<_StepCard> {
           color: _hovering ? LandingPage.surfaceAlt : LandingPage.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _hovering ? widget.gradient[0].withOpacity(0.3) : LandingPage.border.withOpacity(0.5),
+            color: _hovering ? widget.gradient[0].withValues(alpha:0.3) : LandingPage.border.withValues(alpha:0.5),
           ),
           boxShadow: _hovering ? [
             BoxShadow(
-              color: widget.gradient[0].withOpacity(0.15),
+              color: widget.gradient[0].withValues(alpha:0.15),
               blurRadius: 32,
               spreadRadius: 0,
               offset: const Offset(0, 8),
@@ -796,7 +796,7 @@ class _StepCardState extends State<_StepCard> {
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
-                        color: widget.gradient[0].withOpacity(0.3),
+                        color: widget.gradient[0].withValues(alpha:0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 4),
                       ),
@@ -807,7 +807,7 @@ class _StepCardState extends State<_StepCard> {
                 Text(
                   widget.step,
                   style: TextStyle(
-                    color: LandingPage.textMuted.withOpacity(0.5),
+                    color: LandingPage.textMuted.withValues(alpha:0.5),
                     fontSize: 48,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -2,
@@ -954,7 +954,7 @@ class _SuccessStoryCardState extends State<_SuccessStoryCard> {
           color: _hovering ? LandingPage.surfaceAlt : LandingPage.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _hovering ? widget.color.withOpacity(0.3) : LandingPage.border.withOpacity(0.5),
+            color: _hovering ? widget.color.withValues(alpha:0.3) : LandingPage.border.withValues(alpha:0.5),
           ),
         ),
         child: Column(
@@ -1002,7 +1002,7 @@ class _SkillBubble extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha:0.15),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Icon(icon, color: color, size: 28),
@@ -1036,9 +1036,9 @@ class _SuccessBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFF10B981).withOpacity(0.1),
+        color: const Color(0xFF10B981).withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(100),
-        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha:0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1152,14 +1152,14 @@ class _SocialCreditSystem extends StatelessWidget {
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   colors: [
-                    LandingPage.accent.withOpacity(0.1),
+                    LandingPage.accent.withValues(alpha:0.1),
                     LandingPage.surfaceAlt,
                   ],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: LandingPage.accent.withOpacity(0.2)),
+                border: Border.all(color: LandingPage.accent.withValues(alpha:0.2)),
               ),
               child: Column(
                 children: [
@@ -1227,7 +1227,7 @@ class _CreditCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: LandingPage.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha:0.3)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1238,7 +1238,7 @@ class _CreditCard extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.15),
+                  color: color.withValues(alpha:0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: color, size: 24),
@@ -1292,7 +1292,7 @@ class _CreditCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha:0.1),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
@@ -1435,7 +1435,7 @@ class _WhyItem extends StatelessWidget {
               borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: LandingPage.accent.withOpacity(0.3),
+                  color: LandingPage.accent.withValues(alpha:0.3),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -1546,7 +1546,7 @@ class _CategoryCardState extends State<_CategoryCard> {
           color: _hovering ? LandingPage.surfaceAlt : LandingPage.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: _hovering ? LandingPage.accent.withOpacity(0.3) : LandingPage.border.withOpacity(0.5),
+            color: _hovering ? LandingPage.accent.withValues(alpha:0.3) : LandingPage.border.withValues(alpha:0.5),
           ),
         ),
         child: Column(
@@ -1556,7 +1556,7 @@ class _CategoryCardState extends State<_CategoryCard> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: LandingPage.accent.withOpacity(0.1),
+                color: LandingPage.accent.withValues(alpha:0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(widget.data.icon, color: LandingPage.accent, size: 24),
@@ -1579,7 +1579,7 @@ class _CategoryCardState extends State<_CategoryCard> {
                 decoration: BoxDecoration(
                   color: LandingPage.surface,
                   borderRadius: BorderRadius.circular(100),
-                  border: Border.all(color: LandingPage.border.withOpacity(0.5)),
+                  border: Border.all(color: LandingPage.border.withValues(alpha:0.5)),
                 ),
                 child: Text(
                   chip,
@@ -1680,7 +1680,7 @@ class _FAQItemState extends State<_FAQItem> {
         color: LandingPage.card,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _expanded ? LandingPage.accent.withOpacity(0.3) : LandingPage.border.withOpacity(0.5),
+          color: _expanded ? LandingPage.accent.withValues(alpha:0.3) : LandingPage.border.withValues(alpha:0.5),
         ),
       ),
       child: Material(
@@ -1787,14 +1787,14 @@ class _CTASection extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: LinearGradient(
             colors: [
-              LandingPage.accent.withOpacity(0.15),
+              LandingPage.accent.withValues(alpha:0.15),
               LandingPage.surfaceAlt,
             ],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
           ),
           borderRadius: BorderRadius.circular(32),
-          border: Border.all(color: LandingPage.accent.withOpacity(0.2)),
+          border: Border.all(color: LandingPage.accent.withValues(alpha:0.2)),
         ),
         child: Column(
           children: [

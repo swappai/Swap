@@ -3,8 +3,8 @@
 /// Production build:
 ///   flutter build web --release \
 ///     --dart-define=API_BASE_URL=https://app-swap-dev.azurewebsites.net \
-///     --dart-define=ENTRA_CLIENT_ID=<frontend-app-registration-client-id> \
-///     --dart-define=ENTRA_TENANT_ID=<tenant-id>
+///     --dart-define=ENTRA_CLIENT_ID=`<frontend-app-registration-client-id>` \
+///     --dart-define=ENTRA_TENANT_ID=`<tenant-id>`
 ///
 /// Local development: falls back to the defaultValue for each constant.
 class AppConfig {

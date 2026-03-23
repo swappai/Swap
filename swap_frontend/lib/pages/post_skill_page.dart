@@ -170,7 +170,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
       scaffoldBackgroundColor: backgroundColor,
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: cardColor.withOpacity(.6),
+        fillColor: cardColor.withValues(alpha:.6),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,
@@ -335,7 +335,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
                                                                     .disabled,
                                                               )
                                                               ? accentPurple
-                                                                    .withOpacity(
+                                                                    .withValues(alpha:
                                                                       0.45,
                                                                     )
                                                               : accentPurple,
@@ -498,7 +498,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
                                                         WidgetState.disabled,
                                                       )
                                                       ? accentPurple
-                                                            .withOpacity(0.45)
+                                                            .withValues(alpha:0.45)
                                                       : accentPurple,
                                                 ),
                                             foregroundColor:
@@ -787,7 +787,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: cardColor.withOpacity(.8),
+                    color: cardColor.withValues(alpha:.8),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
@@ -879,7 +879,7 @@ class DropdownField<T> extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
-        color: cardColor.withOpacity(.65),
+        color: cardColor.withValues(alpha:.65),
         border: Border.all(color: Colors.white12),
       ),
       child: DropdownButtonHideUnderline(
@@ -1225,7 +1225,7 @@ class PreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: cardColor.withOpacity(.9),
+      color: cardColor.withValues(alpha:.9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(12),

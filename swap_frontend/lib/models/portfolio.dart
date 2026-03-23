@@ -1,4 +1,4 @@
-/// Models for user skill portfolio.
+// Models for user skill portfolio.
 
 import 'review.dart';
 
