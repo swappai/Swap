@@ -3,7 +3,7 @@
 from datetime import datetime
 from enum import Enum
 from typing import Optional, List, Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, EmailStr, Field
 
 
 class ProfileBase(BaseModel):
@@ -177,6 +177,12 @@ class SwapRequestStatus(str, Enum):
     declined = "declined"
     cancelled = "cancelled"
     completed = "completed"
+
+
+class SwapType(str, Enum):
+    """Type of swap."""
+    direct = "direct"
+    indirect = "indirect"
 
 
 class SwapRequestCreate(BaseModel):
