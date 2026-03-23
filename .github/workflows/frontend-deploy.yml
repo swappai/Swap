@@ -32,7 +32,7 @@ jobs:
         working-directory: swap_frontend
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -71,7 +71,7 @@ jobs:
     environment: production
 
     steps:
-      - uses: actions/checkout@v4 # Required by the SWA action
+      - uses: actions/checkout@v5 # Required by the SWA action
 
       - name: Download build artifact
         uses: actions/download-artifact@v4
