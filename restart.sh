@@ -61,5 +61,5 @@ echo -e "  Frontend: ${YELLOW}http://localhost:3000${NC}"
 echo ""
 echo -e "Press ${RED}Ctrl+C${NC} to stop both services"
 
-# Wait for both processes
+# Wait for both processes (frontend and backend)
 wait
