@@ -94,7 +94,7 @@ jobs:
         working-directory: wap-backend
         run: flyctl deploy --remote-only --ha=false
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ vars.FLY_API_TOKEN }}
       
       - name: Wait for deployment health check
         working-directory: wap-backend
@@ -103,7 +103,7 @@ jobs:
           sleep 30
           flyctl status
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          FLY_API_TOKEN: ${{ vars.FLY_API_TOKEN }}
       
       - name: Smoke test deployed app
         run: |
