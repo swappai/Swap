@@ -51,23 +51,19 @@ if "azure.cosmos" not in sys.modules:
     _install_azure_mocks()
 
 
-# ── Environment ───────────────────────────────────────────────────────────────
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_env():
-    """Configure env vars before any module is imported."""
-    os.environ.setdefault("DEBUG", "true")
-    os.environ.setdefault("REDIS_ENABLED", "false")
-    os.environ.setdefault("EMAIL_ENABLED", "false")
-    os.environ.setdefault("COSMOS_CONNECTION_STRING", "AccountEndpoint=https://test.documents.azure.com:443/;AccountKey=dGVzdA==;")
-    os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com/")
-    os.environ.setdefault("AZURE_OPENAI_API_KEY", "test-openai-key")
-    os.environ.setdefault("AZURE_SEARCH_ENDPOINT", "https://test.search.windows.net")
-    os.environ.setdefault("AZURE_SEARCH_API_KEY", "test-search-key")
-    os.environ.setdefault("AZURE_ENTRA_TENANT_NAME", "testciam")
-    os.environ.setdefault("AZURE_ENTRA_TENANT_ID", "test-tenant-id")
-    os.environ.setdefault("AZURE_ENTRA_CLIENT_ID", "test-client-id")
-    os.environ.setdefault("AZURE_ENTRA_AUDIENCE", "api://swap-api/access_as_user")
+# ── Environment (module-level so env vars are set before settings singleton) ──
+os.environ.setdefault("DEBUG", "true")
+os.environ.setdefault("REDIS_ENABLED", "false")
+os.environ.setdefault("EMAIL_ENABLED", "false")
+os.environ.setdefault("COSMOS_CONNECTION_STRING", "AccountEndpoint=https://test.documents.azure.com:443/;AccountKey=dGVzdA==;")
+os.environ.setdefault("AZURE_OPENAI_ENDPOINT", "https://test.openai.azure.com/")
+os.environ.setdefault("AZURE_OPENAI_API_KEY", "test-openai-key")
+os.environ.setdefault("AZURE_SEARCH_ENDPOINT", "https://test.search.windows.net")
+os.environ.setdefault("AZURE_SEARCH_API_KEY", "test-search-key")
+os.environ.setdefault("AZURE_ENTRA_TENANT_NAME", "testciam")
+os.environ.setdefault("AZURE_ENTRA_TENANT_ID", "test-tenant-id")
+os.environ.setdefault("AZURE_ENTRA_CLIENT_ID", "test-client-id")
+os.environ.setdefault("AZURE_ENTRA_AUDIENCE", "api://swap-api/access_as_user")
 
 
 # ── In-memory Cosmos-compatible store ─────────────────────────────────────────

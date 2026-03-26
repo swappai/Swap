@@ -38,13 +38,17 @@ def _patch_jwks(fake_keys: dict | None = None):
 class TestJwksUrl:
     def test_contains_tenant_name(self):
         from app.auth import _jwks_url
-        url = _jwks_url()
-        assert "testciam" in url
+        from app.config import Settings
+        with patch("app.auth.settings", Settings()):
+            url = _jwks_url()
+            assert "testciam" in url
 
     def test_contains_tenant_id(self):
         from app.auth import _jwks_url
-        url = _jwks_url()
-        assert "test-tenant-id" in url
+        from app.config import Settings
+        with patch("app.auth.settings", Settings()):
+            url = _jwks_url()
+            assert "test-tenant-id" in url
 
     def test_contains_keys_endpoint(self):
         from app.auth import _jwks_url

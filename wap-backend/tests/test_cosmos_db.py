@@ -63,9 +63,7 @@ class TestGetProfile:
         from azure.cosmos import exceptions as cosmos_exc
         svc, mock_db = _make_cosmos_service()
         container = MagicMock()
-        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError(
-            status_code=404, message="Not found"
-        )
+        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError("Not found")
         mock_db.get_container_client.return_value = container
 
         result = svc.get_profile("nonexistent")
@@ -130,9 +128,7 @@ class TestUpdateProfile:
         from azure.cosmos import exceptions as cosmos_exc
         svc, mock_db = _make_cosmos_service()
         container = MagicMock()
-        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError(
-            status_code=404, message="Not found"
-        )
+        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError("Not found")
         mock_db.get_container_client.return_value = container
 
         with pytest.raises(KeyError):
@@ -157,9 +153,7 @@ class TestUpsertProfile:
         from azure.cosmos import exceptions as cosmos_exc
         svc, mock_db = _make_cosmos_service()
         container = MagicMock()
-        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError(
-            status_code=404, message="Not found"
-        )
+        container.read_item.side_effect = cosmos_exc.CosmosResourceNotFoundError("Not found")
         mock_db.get_container_client.return_value = container
 
         result = svc.upsert_profile("brand_new", {"email": "new@example.com"})

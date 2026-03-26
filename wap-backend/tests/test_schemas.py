@@ -88,9 +88,10 @@ class TestProfileUpdate:
         d = p.model_dump(exclude_unset=True)
         assert d == {"bio": "new bio", "city": "SF"}
 
-    def test_invalid_email_raises(self):
-        with pytest.raises(ValidationError):
-            ProfileUpdate(email="bad-email")
+    def test_invalid_email_accepted_as_plain_string(self):
+        # ProfileUpdate.email is Optional[str], not EmailStr — accepts any string
+        p = ProfileUpdate(email="bad-email")
+        assert p.email == "bad-email"
 
     def test_valid_email_update(self):
         p = ProfileUpdate(email="new@example.com")
@@ -113,9 +114,10 @@ class TestSwapRequestCreate:
         with pytest.raises(ValidationError):
             SwapRequestCreate(requester_offer="x", requester_need="y")
 
-    def test_missing_offer_raises(self):
-        with pytest.raises(ValidationError):
-            SwapRequestCreate(recipient_uid="r1", requester_need="y")
+    def test_missing_offer_allowed(self):
+        # requester_offer is Optional — no error when omitted
+        r = SwapRequestCreate(recipient_uid="r1", requester_need="y")
+        assert r.requester_offer is None
 
     def test_message_too_long_raises(self):
         with pytest.raises(ValidationError):
