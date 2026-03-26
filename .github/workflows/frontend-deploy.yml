@@ -14,8 +14,8 @@ on:
 env:
   FLUTTER_VERSION: "3.41.5"
   API_BASE_URL: "https://app-swapai-backend.azurewebsites.net"
-  ENTRA_TENANT_NAME: "swapauth"
   ENTRA_REDIRECT_URI: "https://stwa-swap-dev.azurestaticapps.net/"
+  ENTRA_TENANT_NAME: "swapauth"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 permissions:
