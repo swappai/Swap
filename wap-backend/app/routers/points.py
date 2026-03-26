@@ -54,7 +54,7 @@ def award_swap_points(
     recipient_uid: str,
     hours: float,
     skill_level: SkillLevel,
-    notes: str | None = None,
+    notes: Optional[str] = None,
 ) -> int:
     """Award points/credits to both participants and update their profiles. Returns points earned."""
     points = calculate_points(hours, skill_level)

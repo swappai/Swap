@@ -1,6 +1,6 @@
 """Azure AI Search client for vector operations."""
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
@@ -345,7 +345,7 @@ class SkillsSearchService:
         self,
         query_vec: List[float],
         limit: int = 10,
-        category_filter: str | None = None,
+        category_filter: Optional[str] = None,
         score_threshold: float = 0.3,
     ) -> List[Dict[str, Any]]:
         """Search skills by vector similarity with optional category filter."""

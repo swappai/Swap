@@ -89,13 +89,13 @@ app.include_router(profiles.router)
 app.include_router(search.router)
 app.include_router(swaps.router)
 app.include_router(swap_requests.router)
-app.include_router(swap_completion.router)
-app.include_router(reviews.router)
 app.include_router(points.router)
-app.include_router(portfolio.router)
+# TODO: swap_completion, reviews, portfolio routers still reference firebase_db — migrate to cosmos_db
+# app.include_router(swap_completion.router)
+# app.include_router(reviews.router)
+# app.include_router(portfolio.router)
 app.include_router(messages.router)
 app.include_router(moderation.router)
-app.include_router(points.router)
 app.include_router(skills.router)
 
 
