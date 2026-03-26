@@ -47,8 +47,8 @@ jobs:
         run: pytest -v --tb=short
         env:
           DEBUG: "true"
-          REDIS_ENABLED: "false"
           FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+          REDIS_ENABLED: "false"
 
   # ── 2. Deploy via ZIP to App Service ──────────────────────────────────────
   deploy:
