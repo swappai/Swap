@@ -3,7 +3,7 @@
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
 
-from app.schemas import SkillCreate, SkillResponse
+from app.schemas import SkillCreate, SkillUpdate, SkillResponse
 from app.cosmos_db import get_cosmos_service
 from app.embeddings import get_embedding_service
 from app.azure_search import get_skills_search_service
@@ -57,7 +57,14 @@ def create_skill(
         skill_id=skill_doc["id"],
         skill_vec=skill_vec,
         payload={
-            **skill_doc,
+            "posted_by": skill_doc.get("posted_by", ""),
+            "title": skill_doc.get("title", ""),
+            "description": skill_doc.get("description", ""),
+            "category": skill_doc.get("category", ""),
+            "difficulty": skill_doc.get("difficulty", ""),
+            "estimated_hours": skill_doc.get("estimated_hours", 1),
+            "delivery": skill_doc.get("delivery", "Remote Only"),
+            "tags": skill_doc.get("tags", []),
             "poster_name": profile.get("display_name") or profile.get("full_name", ""),
             "poster_city": profile.get("city", ""),
             "poster_swap_credits": profile.get("swap_credits", 0),
@@ -68,6 +75,59 @@ def create_skill(
     _rebuild_profile_skills(cosmos, uid)
 
     return SkillResponse(**skill_doc)
+
+
+@router.put("/{skill_id}", response_model=SkillResponse)
+def update_skill(
+    skill_id: str,
+    skill: SkillUpdate,
+    uid: str = Query(..., description="UID of the skill poster"),
+):
+    """Update an existing skill and re-index it for search."""
+    cosmos = get_cosmos_service()
+    embedding_service = get_embedding_service()
+    skills_search = get_skills_search_service()
+
+    # Verify user exists
+    profile = cosmos.get_profile(uid)
+    if not profile:
+        raise HTTPException(status_code=404, detail="User profile not found")
+
+    # Update skill doc in Cosmos (only non-None fields)
+    update_data = skill.model_dump(exclude_none=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    updated_doc = cosmos.update_skill(skill_id, uid, update_data)
+    if not updated_doc:
+        raise HTTPException(status_code=404, detail="Skill not found")
+
+    # Re-generate embedding and upsert to search index
+    embed_text = _build_embedding_text(updated_doc)
+    skill_vec = embedding_service.encode(embed_text)
+
+    skills_search.upsert_skill(
+        skill_id=updated_doc["id"],
+        skill_vec=skill_vec,
+        payload={
+            "posted_by": updated_doc.get("posted_by", ""),
+            "title": updated_doc.get("title", ""),
+            "description": updated_doc.get("description", ""),
+            "category": updated_doc.get("category", ""),
+            "difficulty": updated_doc.get("difficulty", ""),
+            "estimated_hours": updated_doc.get("estimated_hours", 1),
+            "delivery": updated_doc.get("delivery", "Remote Only"),
+            "tags": updated_doc.get("tags", []),
+            "poster_name": profile.get("display_name") or profile.get("full_name", ""),
+            "poster_city": profile.get("city", ""),
+            "poster_swap_credits": profile.get("swap_credits", 0),
+        },
+    )
+
+    # Rebuild profile skills_to_offer for backward compat
+    _rebuild_profile_skills(cosmos, uid)
+
+    return SkillResponse(**updated_doc)
 
 
 @router.get("/user/{uid}", response_model=List[SkillResponse])
