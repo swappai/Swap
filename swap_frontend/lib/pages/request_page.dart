@@ -5,8 +5,11 @@ import 'package:hugeicons/hugeicons.dart';
 import '../models/swap_request.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/swap_request_service.dart';
+import '../services/messaging_service.dart';
+import '../models/conversation.dart';
 import '../widgets/app_sidebar.dart';
 import 'home_page.dart';
+import 'messages/chat_page.dart';
 
 class RequestsPage extends StatefulWidget {
   const RequestsPage({super.key});
@@ -165,6 +168,7 @@ class _IncomingTabState extends State<_IncomingTab> {
           itemBuilder: (_, i) => _SwapRequestCard(
             request: requests[i],
             isIncoming: true,
+            onTap: () => _onCardTap(context, requests[i]),
             onAccept: requests[i].isPending
                 ? () => _respond(requests[i], true)
                 : null,
@@ -174,6 +178,100 @@ class _IncomingTabState extends State<_IncomingTab> {
           ),
         );
       },
+    );
+  }
+
+  void _onCardTap(BuildContext context, SwapRequest req) async {
+    if (req.isAccepted && req.conversationId != null) {
+      final uid = B2CAuthService.instance.currentUser?.uid ?? '';
+      try {
+        final conversation = await MessagingService().getConversation(req.conversationId!, uid);
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ChatPage(conversation: conversation)),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open chat: $e')));
+        }
+      }
+    } else {
+      _showDetailSheet(context, req);
+    }
+  }
+
+  void _showDetailSheet(BuildContext context, SwapRequest req) {
+    final other = req.requesterProfile;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: HomePage.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: HomePage.line, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              other?.displayName ?? 'Unknown user',
+              style: const TextStyle(color: HomePage.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            _detailRow('Offering', req.requesterOffer),
+            const SizedBox(height: 8),
+            _detailRow('Looking for', req.requesterNeed),
+            if (req.message != null && req.message!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _detailRow('Message', req.message!),
+            ],
+            const SizedBox(height: 8),
+            _detailRow('Status', req.status.name.toUpperCase()),
+            const SizedBox(height: 8),
+            _detailRow('Sent', _timeAgo(req.createdAt)),
+            const SizedBox(height: 16),
+            if (req.isPending)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () { Navigator.pop(context); _respond(req, false); },
+                      style: OutlinedButton.styleFrom(foregroundColor: HomePage.textPrimary, side: BorderSide(color: HomePage.line)),
+                      child: const Text('Decline'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: FilledButton(
+                      onPressed: () { Navigator.pop(context); _respond(req, true); },
+                      style: FilledButton.styleFrom(backgroundColor: HomePage.accent, foregroundColor: Colors.white),
+                      child: const Text('Accept'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label, style: const TextStyle(color: HomePage.textMuted, fontSize: 13)),
+        ),
+        Expanded(child: Text(value, style: const TextStyle(color: HomePage.textPrimary, fontSize: 13))),
+      ],
     );
   }
 }
@@ -243,10 +341,97 @@ class _OutgoingTabState extends State<_OutgoingTab> {
           itemBuilder: (_, i) => _SwapRequestCard(
             request: requests[i],
             isIncoming: false,
+            onTap: () => _onCardTap(context, requests[i]),
             onCancel: requests[i].isPending ? () => _cancel(requests[i]) : null,
           ),
         );
       },
+    );
+  }
+
+  void _onCardTap(BuildContext context, SwapRequest req) async {
+    if (req.isAccepted && req.conversationId != null) {
+      final uid = B2CAuthService.instance.currentUser?.uid ?? '';
+      try {
+        final conversation = await MessagingService().getConversation(req.conversationId!, uid);
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => ChatPage(conversation: conversation)),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open chat: $e')));
+        }
+      }
+    } else {
+      _showDetailSheet(context, req);
+    }
+  }
+
+  void _showDetailSheet(BuildContext context, SwapRequest req) {
+    final other = req.recipientProfile;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: HomePage.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(width: 40, height: 4, decoration: BoxDecoration(color: HomePage.line, borderRadius: BorderRadius.circular(2))),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              other?.displayName ?? 'Unknown user',
+              style: const TextStyle(color: HomePage.textPrimary, fontSize: 20, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 12),
+            _detailRow('Offering', req.requesterOffer),
+            const SizedBox(height: 8),
+            _detailRow('Looking for', req.requesterNeed),
+            if (req.message != null && req.message!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _detailRow('Message', req.message!),
+            ],
+            const SizedBox(height: 8),
+            _detailRow('Status', req.status.name.toUpperCase()),
+            const SizedBox(height: 8),
+            _detailRow('Sent', _timeAgo(req.createdAt)),
+            const SizedBox(height: 16),
+            if (req.isPending)
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () { Navigator.pop(context); _cancel(req); },
+                      style: OutlinedButton.styleFrom(foregroundColor: HomePage.textPrimary, side: BorderSide(color: HomePage.line)),
+                      child: const Text('Cancel Request'),
+                    ),
+                  ),
+                ],
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  static Widget _detailRow(String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label, style: const TextStyle(color: HomePage.textMuted, fontSize: 13)),
+        ),
+        Expanded(child: Text(value, style: const TextStyle(color: HomePage.textPrimary, fontSize: 13))),
+      ],
     );
   }
 }
@@ -267,6 +452,7 @@ class _SwapRequestCard extends StatelessWidget {
   const _SwapRequestCard({
     required this.request,
     required this.isIncoming,
+    this.onTap,
     this.onAccept,
     this.onDecline,
     this.onCancel,
@@ -274,6 +460,7 @@ class _SwapRequestCard extends StatelessWidget {
 
   final SwapRequest request;
   final bool isIncoming;
+  final VoidCallback? onTap;
   final VoidCallback? onAccept;
   final VoidCallback? onDecline;
   final VoidCallback? onCancel;
@@ -284,7 +471,10 @@ class _SwapRequestCard extends StatelessWidget {
         isIncoming ? request.requesterProfile : request.recipientProfile;
     final statusColor = _statusColor(request.status);
 
-    return Card(
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Card(
       color: HomePage.surface,
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -353,6 +543,29 @@ class _SwapRequestCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 _statusBadge(request.status, statusColor),
+                if (request.isAccepted && request.conversationId != null) ...[
+                  const SizedBox(width: 8),
+                  InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: HomePage.accent.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: HomePage.accent.withValues(alpha: 0.4)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(HugeIcons.strokeRoundedMessage01, size: 14, color: HomePage.accentAlt),
+                          SizedBox(width: 4),
+                          Text('Message', style: TextStyle(color: HomePage.accentAlt, fontSize: 12, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
             const SizedBox(height: 12),
@@ -456,6 +669,7 @@ class _SwapRequestCard extends StatelessWidget {
           ],
         ),
       ),
+    ),
     );
   }
 

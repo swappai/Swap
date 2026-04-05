@@ -379,7 +379,7 @@ class SkillsSearchService:
 
         filter_expr = None
         if category_filter:
-            filter_expr = f"category eq '{category_filter}'"
+            filter_expr = f"tolower(category) eq '{category_filter.lower()}'"
 
         results = self.search_client.search(
             search_text=None,
@@ -415,6 +415,14 @@ class SkillsSearchService:
                     "poster_account_type": result.get("poster_account_type") or "person",
                     "score": score,
                 })
+
+        # Deduplicate by skill_id, keeping highest score
+        seen = {}
+        for m in matches:
+            sid = m.get("skill_id") or m.get("id")
+            if sid not in seen or m.get("score", 0) > seen[sid].get("score", 0):
+                seen[sid] = m
+        matches = list(seen.values())
 
         return matches
 

@@ -1,15 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../services/b2c_auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/review_service.dart';
 import '../services/skill_service.dart';
+import '../services/swap_request_service.dart';
+import '../services/messaging_service.dart';
+import '../models/swap_request.dart';
+import '../models/conversation.dart';
 import '../widgets/app_sidebar.dart';
 import '../widgets/star_rating.dart';
 import '../widgets/review_dialog.dart';
 import 'home_page.dart';
 import 'post_skill_page.dart';
 import 'onboarding.dart';
+import 'messages/chat_page.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key, this.uid});
@@ -120,11 +126,47 @@ class ProfilePage extends StatelessWidget {
                                     }
                                   : null,
                             ),
+                            if (bio.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Card(
+                                color: HomePage.surface,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: BorderSide(color: HomePage.line),
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(14),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(HugeIcons.strokeRoundedUserAccount, size: 18, color: HomePage.accentAlt),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(bio, style: const TextStyle(color: HomePage.textPrimary, fontSize: 14, height: 1.5)),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedExchange01, label: 'Total Swaps', value: '$swapsCompleted')),
+                                const SizedBox(width: ProfilePage._gutter),
+                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedStar, label: 'Avg Rating', value: averageRating > 0 ? averageRating.toStringAsFixed(1) : '-')),
+                                const SizedBox(width: ProfilePage._gutter),
+                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedCoins01, label: 'Credits', value: '$swapCredits')),
+                                const SizedBox(width: ProfilePage._gutter),
+                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedCalendar03, label: 'Member Since', value: joinedAt != null ? _formatMonthYear(joinedAt) : 'Recently')),
+                              ],
+                            ),
                             const SizedBox(height: 16),
                             _SegmentedTabs(
                               skillsLabel: 'My Skills',
                               reviewsLabel: 'Reviews',
-                              activityLabel: 'Activity',
+                              activityLabel: 'Swap History',
                               skillsBuilder: () => _SkillsSection(
                                 uid: targetUid,
                                 isOwnProfile: isOwnProfile,
@@ -137,12 +179,8 @@ class ProfilePage extends StatelessWidget {
                                 ),
                               ),
                               reviewsBuilder: () => _ReviewsSection(uid: targetUid),
-                              activityBuilder: () => const _ActivityPlaceholder(),
+                              activityBuilder: () => _SwapHistorySection(uid: targetUid),
                             ),
-                            if (bio.isNotEmpty) ...[
-                              const SizedBox(height: 16),
-                              _AboutCard(bio: bio),
-                            ],
                           ],
                         ),
                       ),
@@ -508,7 +546,7 @@ class _StatCard extends StatelessWidget {
                   Text(
                     value,
                     style: const TextStyle(
-                      color: HomePage.textPrimary,
+                      color: HomePage.accentAlt,
                       fontSize: 20,
                       fontWeight: FontWeight.w800,
                     ),
@@ -724,81 +762,114 @@ class _SkillCardItem extends StatelessWidget {
   final bool showDelete;
   final VoidCallback? onDelete;
 
+  static Color _categoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'design': return const Color(0xFFEC4899);
+      case 'development': return const Color(0xFF3B82F6);
+      case 'business': return const Color(0xFF22C55E);
+      case 'writing': return const Color(0xFFF59E0B);
+      case 'language': return const Color(0xFF8B5CF6);
+      case 'tutoring': return const Color(0xFF06B6D4);
+      case 'music': return const Color(0xFFEF4444);
+      default: return const Color(0xFF6B7280);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
       color: HomePage.surface,
       elevation: 0,
+      clipBehavior: Clip.hardEdge,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(color: HomePage.line),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    skill.title,
-                    style: const TextStyle(
-                      color: HomePage.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
-                    ),
-                  ),
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: _categoryColor(skill.category),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(12),
+                  bottomLeft: Radius.circular(12),
                 ),
-                _badge(skill.category, HomePage.accent),
-                const SizedBox(width: 6),
-                _badge(skill.difficulty, const Color(0xFFF59E0B)),
-                if (showDelete) ...[
-                  const SizedBox(width: 8),
-                  InkWell(
-                    onTap: onDelete,
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(Icons.delete_outline, size: 18, color: Colors.red),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            skill.title,
+                            style: const TextStyle(
+                              color: HomePage.textPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                        _badge(skill.category, _categoryColor(skill.category)),
+                        const SizedBox(width: 6),
+                        _badge(skill.difficulty, const Color(0xFFF59E0B)),
+                        if (showDelete) ...[
+                          const SizedBox(width: 8),
+                          InkWell(
+                            onTap: onDelete,
+                            borderRadius: BorderRadius.circular(8),
+                            child: const Padding(
+                              padding: EdgeInsets.all(4),
+                              child: Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ],
-              ],
-            ),
-            if (skill.description.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                skill.description,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
+                    if (skill.description.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        skill.description,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _infoPill(HugeIcons.strokeRoundedClock01, '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h'),
+                        const SizedBox(width: 8),
+                        _infoPill(HugeIcons.strokeRoundedLocation01, skill.delivery),
+                      ],
+                    ),
+                    if (skill.tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 4,
+                        children: skill.tags.map((t) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                          decoration: BoxDecoration(
+                            color: HomePage.surfaceAlt,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: HomePage.line),
+                          ),
+                          child: Text(t, style: const TextStyle(color: HomePage.textPrimary, fontSize: 11)),
+                        )).toList(),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-            ],
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                _infoPill(Icons.schedule, '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h'),
-                const SizedBox(width: 8),
-                _infoPill(Icons.location_on_outlined, skill.delivery),
-              ],
             ),
-            if (skill.tags.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: skill.tags.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: HomePage.surfaceAlt,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: HomePage.line),
-                  ),
-                  child: Text(t, style: const TextStyle(color: HomePage.textPrimary, fontSize: 11)),
-                )).toList(),
-              ),
-            ],
           ],
         ),
       ),
@@ -872,19 +943,6 @@ class _SectionCard extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _AboutCard extends StatelessWidget {
-  const _AboutCard({required this.bio});
-  final String bio;
-
-  @override
-  Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'About',
-      child: Text(bio, style: const TextStyle(color: HomePage.textPrimary)),
     );
   }
 }
@@ -1191,18 +1249,175 @@ class _ReviewCard extends StatelessWidget {
   }
 }
 
-class _ActivityPlaceholder extends StatelessWidget {
-  const _ActivityPlaceholder();
+class _SwapHistorySection extends StatefulWidget {
+  const _SwapHistorySection({required this.uid});
+  final String uid;
+
+  @override
+  State<_SwapHistorySection> createState() => _SwapHistorySectionState();
+}
+
+class _SwapHistorySectionState extends State<_SwapHistorySection> {
+  List<SwapRequest>? _swaps;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSwaps();
+  }
+
+  Future<void> _loadSwaps() async {
+    try {
+      final service = SwapRequestService();
+      final incoming = await service.getIncomingRequests(widget.uid);
+      final outgoing = await service.getOutgoingRequests(widget.uid);
+      final all = [...incoming, ...outgoing]
+        .where((r) => r.isAccepted || r.isCompleted)
+        .toList()
+        ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      if (mounted) setState(() { _swaps = all; _loading = false; });
+    } catch (e) {
+      debugPrint('Error loading swap history: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _openChat(BuildContext context, SwapRequest req) async {
+    if (req.conversationId == null) return;
+    final uid = B2CAuthService.instance.currentUser?.uid ?? '';
+    try {
+      final conversation = await MessagingService().getConversation(req.conversationId!, uid);
+      if (context.mounted) {
+        Navigator.of(context).push(MaterialPageRoute(builder: (_) => ChatPage(conversation: conversation)));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open chat: $e')));
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'Recent Activity',
-      child: const Text(
-        'No recent activity.',
-        style: TextStyle(color: HomePage.textMuted),
+    if (_loading) {
+      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
+    }
+
+    final swaps = _swaps ?? [];
+    if (swaps.isEmpty) {
+      return _SectionCard(
+        title: 'Swap History',
+        child: const Text('No completed swaps yet.', style: TextStyle(color: HomePage.textMuted)),
+      );
+    }
+
+    final currentUid = B2CAuthService.instance.currentUser?.uid;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final swap in swaps) ...[
+          _SwapHistoryCard(
+            swap: swap,
+            currentUid: currentUid ?? '',
+            onTap: swap.conversationId != null ? () => _openChat(context, swap) : null,
+          ),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _SwapHistoryCard extends StatelessWidget {
+  const _SwapHistoryCard({required this.swap, required this.currentUid, this.onTap});
+  final SwapRequest swap;
+  final String currentUid;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final isIncoming = swap.recipientUid == currentUid;
+    final other = isIncoming ? swap.requesterProfile : swap.recipientProfile;
+    final statusColor = swap.isCompleted ? HomePage.success : Colors.greenAccent;
+    final date = swap.respondedAt ?? swap.updatedAt;
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Card(
+        color: HomePage.surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: HomePage.line),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: HomePage.surfaceAlt,
+                backgroundImage: (other?.photoUrl != null && other!.photoUrl!.isNotEmpty) ? NetworkImage(other.photoUrl!) : null,
+                child: (other?.photoUrl == null || other!.photoUrl!.isEmpty)
+                    ? Text((other?.displayName ?? 'U').characters.first.toUpperCase(), style: const TextStyle(color: HomePage.textPrimary))
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      other?.displayName ?? 'Unknown user',
+                      style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${swap.requesterOffer}  \u2192  ${swap.requesterNeed}',
+                      style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                    ),
+                    child: Text(
+                      swap.status.name.toUpperCase(),
+                      style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatDate(date),
+                    style: const TextStyle(color: HomePage.textMuted, fontSize: 11),
+                  ),
+                ],
+              ),
+              if (onTap != null) ...[
+                const SizedBox(width: 8),
+                Icon(HugeIcons.strokeRoundedMessage01, size: 18, color: HomePage.accentAlt),
+              ],
+            ],
+          ),
+        ),
       ),
     );
+  }
+
+  static String _formatDate(DateTime d) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return '${months[d.month - 1]} ${d.day}';
   }
 }
 

@@ -46,8 +46,9 @@ class _HomePageState extends State<HomePage> {
 
   List<SkillSearchResult> _excludeSelf(List<SkillSearchResult> results) {
     final uid = _myUid;
-    if (uid == null) return results;
-    return results.where((r) => r.postedBy != uid).toList();
+    var filtered = uid == null ? results : results.where((r) => r.postedBy != uid).toList();
+    final seen = <String>{};
+    return filtered.where((r) => seen.add(r.skillId)).toList();
   }
 
   Future<void> _loadInitialResults() async {
@@ -240,11 +241,13 @@ class _DiscoverPaneState extends State<_DiscoverPane> {
   final List<String> categories = const [
     'All Skills',
     'Design',
-    'Coding',
+    'Development',
+    'Business',
     'Writing',
     'Language',
     'Tutoring',
     'Music',
+    'Other',
   ];
 
   void _onCategoryTap(String category) {
