@@ -1,5 +1,6 @@
 """Skills CRUD endpoints."""
 
+from collections import defaultdict
 from typing import List
 from fastapi import APIRouter, HTTPException, Query
 
@@ -176,4 +177,50 @@ def delete_skill(
     # Rebuild profile skills_to_offer
     _rebuild_profile_skills(cosmos, uid)
 
-    return {"message": "Skill deleted", "id": skill_id}
+    return {"message": "Skill deleted"}
+
+
+@router.post("/admin/dedup-index")
+def dedup_skills_index():
+    """Remove duplicate documents from the skills search index.
+
+    Duplicates are identified by (posted_by, title) composite key.
+    Keeps one document per group and deletes the rest.
+    """
+    skills_search = get_skills_search_service()
+    client = skills_search.search_client
+
+    # Fetch all documents
+    results = client.search(
+        search_text="*",
+        select=["id", "skill_id", "posted_by", "title"],
+        top=1000,
+    )
+
+    docs = [
+        {"id": r["id"], "posted_by": r.get("posted_by", ""), "title": r.get("title", "")}
+        for r in results
+    ]
+
+    # Group by composite key
+    groups: dict = defaultdict(list)
+    for doc in docs:
+        key = f"{doc['posted_by']}::{doc['title']}"
+        groups[key].append(doc)
+
+    to_delete = []
+    for key, group in groups.items():
+        if len(group) > 1:
+            to_delete.extend({"id": d["id"]} for d in group[1:])
+
+    if not to_delete:
+        return {"message": "No duplicates found", "total_docs": len(docs)}
+
+    for i in range(0, len(to_delete), 100):
+        client.delete_documents(to_delete[i:i + 100])
+
+    return {
+        "message": f"Deleted {len(to_delete)} duplicate documents",
+        "total_docs": len(docs),
+        "duplicates_removed": len(to_delete),
+    }

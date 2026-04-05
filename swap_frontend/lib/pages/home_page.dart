@@ -68,7 +68,10 @@ class _HomePageState extends State<HomePage> {
     final uid = _myUid;
     var filtered = uid == null ? results : results.where((r) => r.postedBy != uid).toList();
     final seen = <String>{};
-    return filtered.where((r) => seen.add(r.skillId)).toList();
+    return filtered.where((r) {
+      final key = '${r.postedBy}::${r.title}';
+      return seen.add(key);
+    }).toList();
   }
 
   Future<void> _loadInitialResults() async {

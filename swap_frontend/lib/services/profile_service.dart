@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config.dart';
 import 'b2c_auth_service.dart';
@@ -13,7 +14,9 @@ class ProfileService {
   Future<String> uploadPhoto(String uid, List<int> bytes, String filename) async {
     final uri = Uri.parse('$baseUrl/profiles/$uid/photo');
     final request = http.MultipartRequest('POST', uri)
-      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+      ..files.add(http.MultipartFile.fromBytes('file', bytes,
+          filename: filename,
+          contentType: MediaType('image', filename.split('.').last.toLowerCase())));
     final streamed = await request.send().timeout(const Duration(seconds: 30));
     final resp = await http.Response.fromStream(streamed);
     if (resp.statusCode != 200) {

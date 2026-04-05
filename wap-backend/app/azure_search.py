@@ -416,12 +416,15 @@ class SkillsSearchService:
                     "score": score,
                 })
 
-        # Deduplicate by skill_id, keeping highest score
+        # Deduplicate by skill_id and by title+poster, keeping highest score
         seen = {}
         for m in matches:
-            sid = m.get("skill_id") or m.get("id")
+            key = f"{m.get('posted_by', '')}::{m.get('title', '')}"
+            sid = m.get("skill_id") or m.get("id") or key
             if sid not in seen or m.get("score", 0) > seen[sid].get("score", 0):
                 seen[sid] = m
+            if key not in seen or m.get("score", 0) > seen[key].get("score", 0):
+                seen[key] = m
         matches = list(seen.values())
 
         return matches
