@@ -32,6 +32,7 @@ class CosmosService:
         "points_transactions": "/uid",
         "skills": "/posted_by",
         "reviews": "/reviewed_uid",
+        "notifications": "/recipient_uid",
     }
 
     def __init__(self) -> None:
@@ -591,6 +592,71 @@ class CosmosService:
             )
         )
         return len(items) > 0
+
+    # ── Notifications ──────────────────────────────────────────────────────
+
+    def create_notification(self, recipient_uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a notification."""
+        notif_id = str(uuid.uuid4())
+        now = _utcnow_iso()
+        doc = {
+            "id": notif_id,
+            "recipient_uid": recipient_uid,
+            "is_read": False,
+            "created_at": now,
+            **data,
+        }
+        self._container("notifications").create_item(body=doc)
+        return _clean(doc)
+
+    def get_notifications(self, recipient_uid: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get notifications for a user, newest first."""
+        query = f"SELECT * FROM c WHERE c.recipient_uid = @uid ORDER BY c.created_at DESC OFFSET 0 LIMIT {limit}"
+        params = [{"name": "@uid", "value": recipient_uid}]
+        items = list(
+            self._container("notifications").query_items(
+                query=query, parameters=params, partition_key=recipient_uid
+            )
+        )
+        return [_clean(i) for i in items]
+
+    def mark_notification_read(self, notification_id: str, recipient_uid: str) -> None:
+        """Mark a single notification as read."""
+        items = list(
+            self._container("notifications").query_items(
+                query="SELECT * FROM c WHERE c.id = @id",
+                parameters=[{"name": "@id", "value": notification_id}],
+                partition_key=recipient_uid,
+            )
+        )
+        if items:
+            items[0]["is_read"] = True
+            self._container("notifications").replace_item(item=notification_id, body=items[0])
+
+    def mark_all_notifications_read(self, recipient_uid: str) -> int:
+        """Mark all unread notifications as read. Returns count marked."""
+        query = "SELECT * FROM c WHERE c.recipient_uid = @uid AND c.is_read = false"
+        params = [{"name": "@uid", "value": recipient_uid}]
+        items = list(
+            self._container("notifications").query_items(
+                query=query, parameters=params, partition_key=recipient_uid
+            )
+        )
+        for item in items:
+            item["is_read"] = True
+            self._container("notifications").replace_item(item=item["id"], body=item)
+        return len(items)
+
+    def get_unread_notification_count(self, recipient_uid: str) -> int:
+        """Get count of unread notifications."""
+        query = "SELECT VALUE COUNT(1) FROM c WHERE c.recipient_uid = @uid AND c.is_read = false"
+        params = [{"name": "@uid", "value": recipient_uid}]
+        items = list(
+            self._container("notifications").query_items(
+                query=query, parameters=params, partition_key=recipient_uid
+            )
+        )
+        return items[0] if items else 0
 
     # ── Generic helpers (used by migration script) ────────────────────────────
 

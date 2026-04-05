@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
-from app.routers import profiles, search, swaps, swap_requests, messages, moderation, points, skills, reviews
+from app.routers import profiles, search, swaps, swap_requests, messages, moderation, points, skills, reviews, notifications
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +113,7 @@ app.include_router(reviews.router)
 app.include_router(messages.router)
 app.include_router(moderation.router)
 app.include_router(skills.router)
+app.include_router(notifications.router)
 
 
 # ── Health check ──────────────────────────────────────────────────────────────

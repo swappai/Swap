@@ -1,7 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'landing_page.dart';
+import 'notifications_page.dart';
 import 'profile_page.dart';
+import '../services/notification_service.dart';
 import '../services/search_service.dart';
 import '../services/skill_service.dart';
 import '../services/b2c_auth_service.dart';
@@ -35,11 +38,28 @@ class _HomePageState extends State<HomePage> {
   bool _loadingSearch = false;
   List<SkillSearchResult> _searchResults = [];
   String _currentQuery = '';
+  int _unreadNotifCount = 0;
+  Timer? _notifTimer;
 
   @override
   void initState() {
     super.initState();
     _loadInitialResults();
+    _fetchUnreadCount();
+    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchUnreadCount());
+  }
+
+  @override
+  void dispose() {
+    _notifTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    final uid = _myUid;
+    if (uid == null) return;
+    final count = await NotificationService().getUnreadCount(uid);
+    if (mounted) setState(() => _unreadNotifCount = count);
   }
 
   String? get _myUid => B2CAuthService.instance.currentUser?.uid;
@@ -189,7 +209,7 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: Column(
                 children: [
-                  _TopBar(onSearch: (q) => _handleSearch(q)),
+                  _TopBar(onSearch: (q) => _handleSearch(q), unreadCount: _unreadNotifCount),
                   if (_loadingSearch)
                     const LinearProgressIndicator(minHeight: 3),
                   Expanded(
@@ -453,6 +473,36 @@ class _SkillCard extends StatelessWidget {
   final SkillSearchResult result;
   final VoidCallback? onRequest;
 
+  static IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return HugeIcons.strokeRoundedPaintBrush01;
+      case 'development':
+      case 'programming':
+        return HugeIcons.strokeRoundedSourceCode;
+      case 'business':
+        return HugeIcons.strokeRoundedChart;
+      case 'music':
+        return HugeIcons.strokeRoundedMusicNote01;
+      case 'language':
+        return HugeIcons.strokeRoundedTranslation;
+      case 'writing':
+        return HugeIcons.strokeRoundedQuillWrite01;
+      case 'tutoring':
+        return HugeIcons.strokeRoundedTeacher;
+      case 'cooking':
+        return HugeIcons.strokeRoundedChefHat;
+      case 'photography':
+        return HugeIcons.strokeRoundedCamera01;
+      case 'marketing':
+        return HugeIcons.strokeRoundedMegaphone01;
+      case 'fitness':
+        return HugeIcons.strokeRoundedDumbbell01;
+      default:
+        return HugeIcons.strokeRoundedStars;
+    }
+  }
+
   static Color _categoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'design':
@@ -606,7 +656,7 @@ class _SkillCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _badge(result.category, catColor),
+                      _badge(result.category, catColor, icon: _categoryIcon(result.category)),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -698,7 +748,7 @@ class _SkillCard extends StatelessWidget {
     );
   }
 
-  static Widget _badge(String text, Color color) {
+  static Widget _badge(String text, Color color, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -706,9 +756,18 @@ class _SkillCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
@@ -1017,9 +1076,10 @@ class _SkillRequestDialogState extends State<_SkillRequestDialog> {
 }
 
 class _TopBar extends StatelessWidget implements PreferredSizeWidget {
-  const _TopBar({this.onSearch});
+  const _TopBar({this.onSearch, this.unreadCount = 0});
 
   final ValueChanged<String>? onSearch;
+  final int unreadCount;
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -1069,20 +1129,31 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
               IconButton(
                 tooltip: 'Notifications',
                 icon: const Icon(HugeIcons.strokeRoundedNotification01),
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  );
+                },
               ),
-              Positioned(
-                right: 10,
-                top: 10,
-                child: Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFF22C55E),
-                    shape: BoxShape.circle,
+              if (unreadCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF22C55E),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                      ),
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
           IconButton(

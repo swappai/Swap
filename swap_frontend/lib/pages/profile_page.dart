@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../services/b2c_auth_service.dart';
 import '../services/profile_service.dart';
@@ -17,7 +18,7 @@ import 'post_skill_page.dart';
 import 'onboarding.dart';
 import 'messages/chat_page.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.uid});
 
   /// If null, shows the current user's profile. If set, shows another user's profile.
@@ -26,11 +27,35 @@ class ProfilePage extends StatelessWidget {
   static const double _gutter = 12;
 
   @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  int _refreshKey = 0;
+
+  Future<void> _pickAndUploadPhoto(String uid) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null) return;
+    try {
+      final bytes = await picked.readAsBytes();
+      await ProfileService().uploadPhoto(uid, bytes, picked.name);
+      if (mounted) setState(() => _refreshKey++);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Photo upload failed: $e')),
+        );
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final currentUid = B2CAuthService.instance.currentUser?.uid;
-    final targetUid = uid ?? currentUid;
+    final targetUid = widget.uid ?? currentUid;
     if (targetUid == null) return const _AuthGuard();
-    final isOwnProfile = (uid == null || uid == currentUid);
+    final isOwnProfile = (widget.uid == null || widget.uid == currentUid);
 
     return Scaffold(
       backgroundColor: HomePage.bg,
@@ -41,6 +66,7 @@ class ProfilePage extends StatelessWidget {
             AppSidebar(active: isOwnProfile ? 'Profile' : ''),
             Expanded(
               child: FutureBuilder<Map<String, dynamic>?>(
+                key: ValueKey(_refreshKey),
                 future: ProfileService().getProfile(targetUid),
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
@@ -124,6 +150,9 @@ class ProfilePage extends StatelessWidget {
                                         const SnackBar(content: Text('Settings coming soon')),
                                       );
                                     }
+                                  : null,
+                              onEditPhoto: isOwnProfile
+                                  ? () => _pickAndUploadPhoto(targetUid)
                                   : null,
                             ),
                             if (bio.isNotEmpty) ...[
@@ -215,6 +244,7 @@ class _HeaderBanner extends StatelessWidget {
     this.isOwnProfile = true,
     this.onEdit,
     this.onSettings,
+    this.onEditPhoto,
   });
 
   final String name;
@@ -232,6 +262,7 @@ class _HeaderBanner extends StatelessWidget {
   final bool isOwnProfile;
   final VoidCallback? onEdit;
   final VoidCallback? onSettings;
+  final VoidCallback? onEditPhoto;
 
   @override
   Widget build(BuildContext context) {
@@ -361,47 +392,68 @@ class _HeaderBanner extends StatelessWidget {
                 Positioned(
                   left: 0,
                   top: -42,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF9F67FF), Color(0xFF7C3AED)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black38,
-                          blurRadius: 12,
-                          offset: Offset(0, 6),
+                  child: GestureDetector(
+                    onTap: onEditPhoto,
+                    child: Stack(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(3),
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              colors: [Color(0xFF9F67FF), Color(0xFF7C3AED)],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black38,
+                                blurRadius: 12,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: FutureBuilder<String?>(
+                            future: _resolvePhotoUrl(photoUrl),
+                            builder: (context, snap) {
+                              final url = snap.data;
+                              return CircleAvatar(
+                                radius: 42,
+                                backgroundColor: HomePage.surfaceAlt,
+                                foregroundImage: (url != null && url.isNotEmpty)
+                                    ? NetworkImage(url)
+                                    : null,
+                                child: (url == null || url.isEmpty)
+                                    ? Text(
+                                        name.isNotEmpty
+                                            ? name.characters.first.toUpperCase()
+                                            : 'U',
+                                        style: const TextStyle(
+                                          color: HomePage.textPrimary,
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      )
+                                    : null,
+                              );
+                            },
+                          ),
                         ),
+                        if (onEditPhoto != null)
+                          Positioned(
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: HomePage.accent,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: HomePage.surface, width: 2),
+                              ),
+                              child: const Icon(HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
+                            ),
+                          ),
                       ],
-                    ),
-                    child: FutureBuilder<String?>(
-                      future: _resolvePhotoUrl(photoUrl),
-                      builder: (context, snap) {
-                        final url = snap.data;
-                        return CircleAvatar(
-                          radius: 42,
-                          backgroundColor: HomePage.surfaceAlt,
-                          foregroundImage: (url != null && url.isNotEmpty)
-                              ? NetworkImage(url)
-                              : null,
-                          child: (url == null || url.isEmpty)
-                              ? Text(
-                                  name.isNotEmpty
-                                      ? name.characters.first.toUpperCase()
-                                      : 'U',
-                                  style: const TextStyle(
-                                    color: HomePage.textPrimary,
-                                    fontSize: 30,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                )
-                              : null,
-                        );
-                      },
                     ),
                   ),
                 ),

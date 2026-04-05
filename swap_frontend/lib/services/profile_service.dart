@@ -10,6 +10,19 @@ class ProfileService {
   ProfileService({String? baseUrl})
     : baseUrl = baseUrl ?? AppConfig.apiBaseUrl;
 
+  Future<String> uploadPhoto(String uid, List<int> bytes, String filename) async {
+    final uri = Uri.parse('$baseUrl/profiles/$uid/photo');
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final streamed = await request.send().timeout(const Duration(seconds: 30));
+    final resp = await http.Response.fromStream(streamed);
+    if (resp.statusCode != 200) {
+      throw Exception('Photo upload failed: ${resp.statusCode} ${resp.body}');
+    }
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    return data['photo_url'] as String;
+  }
+
   Future<Map<String, dynamic>?> getProfile(String uid) async {
     final uri = Uri.parse('$baseUrl/profiles/$uid');
     try {

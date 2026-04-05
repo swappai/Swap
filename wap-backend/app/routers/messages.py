@@ -262,6 +262,25 @@ def send_message(
                 conversation_id=conversation_id,
             )
 
+    # Create notification for recipient
+    if other_uid:
+        try:
+            sender_profile_data = cosmos.get_profile(uid)
+            sender_name = sender_profile_data.get("display_name", "Someone") if sender_profile_data else "Someone"
+            cosmos.create_notification(
+                recipient_uid=other_uid,
+                data={
+                    "type": "new_message",
+                    "title": "New Message",
+                    "body": f"{sender_name} sent you a message",
+                    "sender_uid": uid,
+                    "sender_name": sender_name,
+                    "related_id": conversation_id,
+                },
+            )
+        except Exception:
+            pass
+
     return MessageResponse(
         id=msg["id"],
         conversation_id=conversation_id,

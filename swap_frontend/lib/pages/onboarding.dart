@@ -157,9 +157,6 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
         return;
       }
 
-      // Avatar upload is not yet supported (no blob storage configured).
-      // _avatar is captured but not uploaded; existing photo_url is preserved.
-
       // Convert structured skills to simple strings for the backend.
       String skillsListToText(List<SkillEntry> list) {
         return list
@@ -191,6 +188,17 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
         accountType: _accountType,
         timeout: const Duration(seconds: 12),
       );
+
+      // Upload avatar if newly picked
+      if (_avatar != null) {
+        try {
+          final bytes = await _avatar!.readAsBytes();
+          final filename = _avatar!.path.split('/').last;
+          await ProfileService().uploadPhoto(user.uid, bytes, filename);
+        } catch (e) {
+          debugPrint('Photo upload error (non-fatal): $e');
+        }
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

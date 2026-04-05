@@ -193,6 +193,23 @@ def create_swap_request(
             request_id=request_doc["id"],
         )
 
+    # Create notification for recipient
+    try:
+        requester_name = requester_profile.get("display_name", "Someone") if requester_profile else "Someone"
+        cosmos.create_notification(
+            recipient_uid=request.recipient_uid,
+            data={
+                "type": "swap_request",
+                "title": "New Swap Request",
+                "body": f"{requester_name} wants to swap with you",
+                "sender_uid": requester_uid,
+                "sender_name": requester_name,
+                "related_id": request_doc["id"],
+            },
+        )
+    except Exception:
+        pass
+
     return _enrich_swap_request(request_doc)
 
 
@@ -318,6 +335,25 @@ def respond_to_request(
             accepted=(action.action == "accept"),
             conversation_id=conversation_id,
         )
+
+    # Create notification for requester
+    try:
+        recipient_name = recipient_profile.get("display_name", "Someone") if recipient_profile else "Someone"
+        notif_type = "swap_accepted" if action.action == "accept" else "swap_declined"
+        notif_body = f"{recipient_name} {'accepted' if action.action == 'accept' else 'declined'} your swap request"
+        cosmos.create_notification(
+            recipient_uid=request_data["requester_uid"],
+            data={
+                "type": notif_type,
+                "title": "Swap Request Update",
+                "body": notif_body,
+                "sender_uid": uid,
+                "sender_name": recipient_name,
+                "related_id": request_id,
+            },
+        )
+    except Exception:
+        pass
 
     return _enrich_swap_request(updated)
 

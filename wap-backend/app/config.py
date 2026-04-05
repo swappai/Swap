@@ -47,6 +47,10 @@ class Settings(BaseSettings):
     email_enabled: bool = True
     app_url: str = "http://localhost:3000"
 
+    # ── Azure Blob Storage ─────────────────────────────────────────────────
+    azure_storage_connection_string: Optional[str] = None
+    azure_storage_container: str = "profile-photos"
+
     # ── App ───────────────────────────────────────────────────────────────────
     app_name: str = "$wap"
     debug: bool = False

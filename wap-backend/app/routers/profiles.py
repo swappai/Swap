@@ -1,7 +1,7 @@
 """Profile management endpoints."""
 
 from typing import Optional
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, UploadFile, File as FastAPIFile
 from datetime import datetime
 
 from app.config import settings
@@ -205,4 +205,36 @@ def delete_profile(uid: str):
     search_service.delete_profile(uid)
 
     return {"message": "Profile deleted successfully", "uid": uid}
+
+
+@router.post("/{uid}/photo")
+async def upload_profile_photo(uid: str, file: UploadFile = FastAPIFile(...)):
+    """Upload a profile photo to Azure Blob Storage."""
+    cosmos_service = get_cosmos_service()
+
+    existing = cosmos_service.get_profile(uid)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Profile not found")
+
+    if not file.content_type or not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large (max 5MB)")
+
+    from app.blob_service import get_blob_service
+    blob_service = get_blob_service()
+    photo_url = blob_service.upload_profile_photo(uid, contents, file.content_type)
+
+    cosmos_service.update_profile(uid, {"photo_url": photo_url})
+
+    # Update search index if available
+    try:
+        search_service = get_azure_search_service()
+        search_service.update_profile_field(uid, "photo_url", photo_url)
+    except Exception:
+        pass
+
+    return {"photo_url": photo_url}
 

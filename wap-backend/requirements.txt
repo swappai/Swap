@@ -13,6 +13,7 @@ azure-identity==1.15.0
 
 # ── Azure — new services (Phase 3 migration) ──────────────
 azure-cosmos==4.5.1
+azure-storage-blob==12.19.0
 python-jose[cryptography]==3.3.0
 azure-keyvault-secrets==4.7.0
 opencensus-ext-azure==1.1.13
