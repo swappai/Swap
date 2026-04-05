@@ -44,10 +44,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
   File? _avatar; // newly picked image (local)
   String? _existingPhotoUrl; // existing photo_url from profile API
 
-  // Step 2: Skills to Offer (structured rows)
-  final List<SkillEntry> _offer = [];
-
-  // Step 3: Services You Need (structured rows)
+  // Step 2: Services You Need (structured rows)
   final List<SkillEntry> _need = [];
 
   // Preferences
@@ -132,7 +129,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
 
   void _next() {
     if (_step == 1 && !_formKey.currentState!.validate()) return;
-    if (_step < 4) {
+    if (_step < 3) {
       setState(() => _step++);
     } else {
       _submit();
@@ -164,7 +161,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
             .join(', ');
       }
 
-      final offersText = skillsListToText(_offer);
+      final offersText = ''; // auto-built from posted skills by backend
       final needsText = skillsListToText(_need);
 
       await ProfileService().upsertProfile(
@@ -219,7 +216,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
 
   @override
   Widget build(BuildContext context) {
-    final stepsTotal = 5;
+    final stepsTotal = 4;
     final progress = (_step + 1) / stepsTotal;
 
     final theme = ThemeData(
@@ -362,22 +359,6 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                               ),
                               2 => _StepSkillsForm(
                                 key: const ValueKey('step2'),
-                                title: 'Skills to Offer',
-                                subtitle:
-                                    'What can you teach? Be specific about your experience level and what you can help with.',
-                                nameLabel: 'Skill Name',
-                                addLabel: 'Add Skill',
-                                categories: _skillCategories,
-                                levels: _levels,
-                                entries: _offer,
-                                onChanged: (list) => setState(
-                                  () => _offer
-                                    ..clear()
-                                    ..addAll(list),
-                                ),
-                              ),
-                              3 => _StepSkillsForm(
-                                key: const ValueKey('step3'),
                                 title: 'Services You Need',
                                 subtitle:
                                     'What do you want to learn or get help with? Add as many as you want.',
@@ -392,8 +373,8 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                                     ..addAll(list),
                                 ),
                               ),
-                              4 => _StepPreferences(
-                                key: const ValueKey('step4'),
+                              3 => _StepPreferences(
+                                key: const ValueKey('step3'),
                                 dmOpen: _dmOpen,
                                 emailUpdates: _emailUpdates,
                                 showCity: _showCity,
@@ -425,10 +406,10 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                         FilledButton.icon(
                           onPressed: _next,
                           icon: Icon(
-                            _step < 4 ? Icons.arrow_forward : Icons.check,
+                            _step < 3 ? Icons.arrow_forward : Icons.check,
                           ),
                           label: Text(
-                            _step < 4 ? 'Continue' : 'Complete Setup',
+                            _step < 3 ? 'Continue' : 'Complete Setup',
                           ),
                         ),
                       ],
@@ -506,9 +487,8 @@ class _StepHeader extends StatelessWidget {
       children: [
         pill('Account Type', 0),
         pill('Profile', 1),
-        pill('Skills to Offer', 2),
-        pill('Services You Need', 3),
-        pill('Preferences', 4),
+        pill('Services You Need', 2),
+        pill('Preferences', 3),
       ],
     );
   }

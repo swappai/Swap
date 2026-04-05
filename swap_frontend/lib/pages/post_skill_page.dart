@@ -24,7 +24,8 @@ const Color _textDim = Color(0xFF6B7280);
 
 class PostSkillPage extends StatefulWidget {
   final Skill? existingSkill;
-  const PostSkillPage({super.key, this.existingSkill});
+  final bool popOnSuccess;
+  const PostSkillPage({super.key, this.existingSkill, this.popOnSuccess = false});
 
   @override
   State<PostSkillPage> createState() => _PostSkillPageState();
@@ -185,10 +186,14 @@ class _PostSkillPageState extends State<PostSkillPage>
       );
       await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const HomePage()),
-        (route) => false,
-      );
+      if (widget.popOnSuccess) {
+        Navigator.of(context).pop(true);
+      } else {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const HomePage()),
+          (route) => false,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

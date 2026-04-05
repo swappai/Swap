@@ -17,6 +17,7 @@ import '../widgets/star_rating.dart';
 import 'home_page.dart';
 import 'post_skill_page.dart';
 import 'onboarding.dart';
+import 'edit_profile_page.dart';
 import 'messages/chat_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -165,9 +166,12 @@ class _ProfilePageState extends State<ProfilePage> {
                               joinedAt: joinedAt,
                               isOwnProfile: isOwnProfile,
                               onEdit: isOwnProfile
-                                  ? () => Navigator.of(context).push(
-                                      MaterialPageRoute(builder: (_) => const ProfileSetupFlow()),
-                                    )
+                                  ? () async {
+                                      final changed = await Navigator.of(context).push<bool>(
+                                        MaterialPageRoute(builder: (_) => const EditProfilePage()),
+                                      );
+                                      if (changed == true && mounted) setState(() => _refreshKey++);
+                                    }
                                   : null,
                               onSettings: isOwnProfile
                                   ? () {
@@ -857,6 +861,26 @@ class _SkillsSectionState extends State<_SkillsSection> {
                 onDelete: () => _deleteSkill(skills[i]),
               ),
             ),
+            if (widget.isOwnProfile) ...[
+              const SizedBox(height: 14),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final posted = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(builder: (_) => const PostSkillPage(popOnSuccess: true)),
+                    );
+                    if (posted == true && mounted) _loadSkills();
+                  },
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Add Skill'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: HomePage.accentAlt,
+                    side: const BorderSide(color: HomePage.line),
+                  ),
+                ),
+              ),
+            ],
             if (widget.servicesNeeded.trim().isNotEmpty) ...[
               const SizedBox(height: 14),
               _InfoCard(
