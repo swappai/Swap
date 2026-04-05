@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:image_cropper/image_cropper.dart';
@@ -65,7 +63,7 @@ class _ProfilePageState extends State<ProfilePage> {
     if (cropped == null) return;
 
     try {
-      final bytes = await File(cropped.path).readAsBytes();
+      final bytes = await cropped.readAsBytes();
       final name = picked.name;
       await ProfileService().uploadPhoto(uid, bytes, name);
       // Clear Flutter's image cache so the new photo shows immediately
