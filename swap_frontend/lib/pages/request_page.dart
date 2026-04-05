@@ -1,5 +1,6 @@
 // lib/pages/requests_page.dart
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../models/swap_request.dart';
 import '../services/b2c_auth_service.dart';
@@ -55,43 +56,23 @@ class _RequestsPageState extends State<RequestsPage>
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        const SizedBox(width: 12),
-                        _Badge(
-                          text: 'Live',
-                          icon: Icons.bolt,
-                          fg: Colors.white,
-                          bg: HomePage.accent,
-                        ),
                       ],
                     ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: HomePage.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: HomePage.line),
-                      ),
-                      child: TabBar(
-                        controller: _tab,
-                        isScrollable: true,
-                        indicator: BoxDecoration(
-                          color: HomePage.surfaceAlt,
-                          borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: HomePage.accentAlt),
-                        ),
-                        padding: const EdgeInsets.all(6),
-                        labelColor: Colors.white,
-                        unselectedLabelColor: HomePage.textMuted,
-                        labelStyle: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                        ),
-                        tabs: const [
-                          Tab(text: 'Incoming'),
-                          Tab(text: 'Sent'),
-                        ],
-                      ),
+                    child: TabBar(
+                      controller: _tab,
+                      isScrollable: true,
+                      indicatorColor: HomePage.accentAlt,
+                      indicatorWeight: 3,
+                      labelColor: Colors.white,
+                      unselectedLabelColor: HomePage.textMuted,
+                      labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      tabs: const [
+                        Tab(text: 'Incoming'),
+                        Tab(text: 'Sent'),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -272,6 +253,16 @@ class _OutgoingTabState extends State<_OutgoingTab> {
 
 /* ========================= Swap Request Card ============================== */
 
+String _timeAgo(DateTime dt) {
+  final now = DateTime.now();
+  final diff = now.difference(dt);
+  if (diff.inSeconds < 60) return 'just now';
+  if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+  if (diff.inHours < 24) return '${diff.inHours}h ago';
+  if (diff.inDays < 7) return '${diff.inDays}d ago';
+  return '${(diff.inDays / 7).floor()}w ago';
+}
+
 class _SwapRequestCard extends StatelessWidget {
   const _SwapRequestCard({
     required this.request,
@@ -307,20 +298,27 @@ class _SwapRequestCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor: HomePage.surfaceAlt,
-                  backgroundImage: (other?.photoUrl != null &&
-                          other!.photoUrl!.isNotEmpty)
-                      ? NetworkImage(other.photoUrl!)
-                      : null,
-                  child:
-                      (other?.photoUrl == null || other!.photoUrl!.isEmpty)
-                          ? const Icon(
-                              Icons.person,
-                              color: HomePage.textMuted,
-                            )
-                          : null,
+                Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: statusColor, width: 2.5),
+                  ),
+                  child: CircleAvatar(
+                    radius: 22,
+                    backgroundColor: HomePage.surfaceAlt,
+                    backgroundImage: (other?.photoUrl != null &&
+                            other!.photoUrl!.isNotEmpty)
+                        ? NetworkImage(other.photoUrl!)
+                        : null,
+                    child:
+                        (other?.photoUrl == null || other!.photoUrl!.isEmpty)
+                            ? const Icon(
+                                Icons.person,
+                                color: HomePage.textMuted,
+                              )
+                            : null,
+                  ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -346,25 +344,69 @@ class _SwapRequestCard extends StatelessWidget {
                     ],
                   ),
                 ),
+                Text(
+                  _timeAgo(request.createdAt),
+                  style: const TextStyle(
+                    color: HomePage.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 _statusBadge(request.status, statusColor),
               ],
             ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: HomePage.surfaceAlt,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(HugeIcons.strokeRoundedGift, size: 16, color: HomePage.accentAlt),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      request.requesterOffer,
+                      style: const TextStyle(color: HomePage.textPrimary, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: Icon(HugeIcons.strokeRoundedArrowRight01, size: 16, color: HomePage.textMuted),
+                  ),
+                  Icon(HugeIcons.strokeRoundedSearch01, size: 16, color: HomePage.accentAlt),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      request.requesterNeed,
+                      style: const TextStyle(color: HomePage.textPrimary, fontSize: 13),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             if (request.message != null && request.message!.isNotEmpty) ...[
               const SizedBox(height: 10),
-              Text(
-                request.message!,
-                style: const TextStyle(color: HomePage.textMuted),
+              Container(
+                padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8, right: 8),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    left: BorderSide(color: HomePage.accent, width: 4),
+                  ),
+                ),
+                child: Text(
+                  request.message!,
+                  style: const TextStyle(
+                    color: HomePage.textMuted,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
               ),
             ],
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _chip('Offers: ${request.requesterOffer}'),
-                _chip('Needs: ${request.requesterNeed}'),
-              ],
-            ),
             if (onAccept != null || onDecline != null || onCancel != null) ...[
               const SizedBox(height: 12),
               Row(
@@ -452,58 +494,6 @@ class _SwapRequestCard extends StatelessWidget {
 
 /* ================================ Widgets ================================= */
 
-class _Badge extends StatelessWidget {
-  const _Badge({
-    required this.text,
-    this.icon,
-    required this.fg,
-    required this.bg,
-  });
-
-  final String text;
-  final IconData? icon;
-  final Color fg;
-  final Color bg;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: bg.withValues(alpha:0.6)),
-      ),
-      child: Row(
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 14, color: fg),
-            const SizedBox(width: 6),
-          ],
-          Text(
-            text,
-            style: TextStyle(color: fg, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-Widget _chip(String text) => Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: HomePage.surfaceAlt,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: HomePage.line),
-      ),
-      child: Text(
-        text,
-        style: const TextStyle(color: HomePage.textPrimary, fontSize: 12),
-        overflow: TextOverflow.ellipsis,
-      ),
-    );
-
 class _LoadingList extends StatelessWidget {
   const _LoadingList();
   @override
@@ -520,9 +510,14 @@ class _EmptyState extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.inbox_rounded, size: 42, color: HomePage.textMuted),
+        const Icon(HugeIcons.strokeRoundedInbox, size: 48, color: HomePage.textMuted),
         const SizedBox(height: 10),
         Text(text, style: const TextStyle(color: HomePage.textMuted)),
+        const SizedBox(height: 6),
+        const Text(
+          'Browse the marketplace to find skills to swap!',
+          style: TextStyle(color: HomePage.textMuted, fontSize: 12),
+        ),
       ],
     );
   }
@@ -538,7 +533,7 @@ class _ErrorState extends StatelessWidget {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Icon(Icons.error_outline, size: 42, color: Colors.redAccent),
+        const Icon(HugeIcons.strokeRoundedAlert02, size: 42, color: Colors.redAccent),
         const SizedBox(height: 10),
         Text(
           'Error: $message',

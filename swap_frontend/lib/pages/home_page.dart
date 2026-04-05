@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'landing_page.dart';
 import 'profile_page.dart';
 import '../services/search_service.dart';
@@ -297,7 +298,7 @@ class _DiscoverPaneState extends State<_DiscoverPane> {
                       widget.onClearSearch?.call();
                     },
                     icon: const Icon(
-                      Icons.close,
+                      HugeIcons.strokeRoundedCancel01,
                       size: 18,
                       color: Colors.white,
                     ),
@@ -365,7 +366,7 @@ class _DiscoverPaneState extends State<_DiscoverPane> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           const Icon(
-                            Icons.search_off,
+                            HugeIcons.strokeRoundedSearchRemove,
                             size: 64,
                             color: HomePage.textMuted,
                           ),
@@ -449,8 +450,51 @@ class _SkillCard extends StatelessWidget {
   final SkillSearchResult result;
   final VoidCallback? onRequest;
 
+  static Color _categoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return const Color(0xFFE879F9);
+      case 'development':
+      case 'programming':
+        return const Color(0xFF60A5FA);
+      case 'business':
+        return const Color(0xFF34D399);
+      case 'music':
+        return const Color(0xFFFBBF24);
+      case 'language':
+        return const Color(0xFFF87171);
+      case 'writing':
+        return const Color(0xFF818CF8);
+      case 'tutoring':
+        return const Color(0xFF2DD4BF);
+      case 'cooking':
+        return const Color(0xFFFF9F43);
+      case 'photography':
+        return const Color(0xFFFF6B6B);
+      case 'marketing':
+        return const Color(0xFF48DBFB);
+      case 'fitness':
+        return const Color(0xFF1DD1A1);
+      default:
+        return const Color(0xFF94A3B8);
+    }
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    if (name.length >= 2) return name.substring(0, 2).toUpperCase();
+    return name.toUpperCase();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final catColor = _categoryColor(result.category);
+    final posterName = result.posterName.isNotEmpty ? result.posterName : 'User';
+    final isBusiness = result.posterAccountType == 'business';
+
     return Material(
       color: HomePage.surface,
       borderRadius: BorderRadius.circular(14),
@@ -468,136 +512,183 @@ class _SkillCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: HomePage.line),
           ),
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Top: Title + badges
-              Row(
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: catColor, width: 4),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      result.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: HomePage.textPrimary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 17,
+                  // Poster avatar row
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: catColor.withValues(alpha: 0.2),
+                        child: Text(
+                          _initials(posterName),
+                          style: TextStyle(
+                            color: catColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 8),
+                      Text(
+                        posterName,
+                        style: const TextStyle(
+                          color: HomePage.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: HomePage.surfaceAlt,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: HomePage.line),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isBusiness
+                                  ? HugeIcons.strokeRoundedStore01
+                                  : HugeIcons.strokeRoundedUser,
+                              size: 12,
+                              color: HomePage.textMuted,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              isBusiness ? 'Business' : 'Person',
+                              style: const TextStyle(
+                                color: HomePage.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      StarRating(
+                        rating: result.posterAverageRating,
+                        count: result.posterReviewCount,
+                        compact: true,
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  _badge(result.category, HomePage.accent),
-                ],
-              ),
-              const SizedBox(height: 4),
-              // Difficulty + delivery + hours
-              Row(
-                children: [
-                  _pill(result.difficulty, const Color(0xFFF59E0B)),
-                  const SizedBox(width: 8),
-                  _pill(result.delivery, HomePage.textMuted),
-                  const SizedBox(width: 8),
-                  _pill(
-                    '${result.estimatedHours.toStringAsFixed(result.estimatedHours == result.estimatedHours.roundToDouble() ? 0 : 1)}h',
-                    HomePage.textMuted,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
-              // Description
-              Expanded(
-                child: Text(
-                  result.description,
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: HomePage.textMuted,
-                    fontSize: 13,
-                    height: 1.4,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-              // Tags row
-              if (result.tags.isNotEmpty)
-                SizedBox(
-                  height: 28,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: result.tags.length > 4 ? 4 : result.tags.length,
-                    separatorBuilder: (_, __) => const SizedBox(width: 6),
-                    itemBuilder: (_, i) {
-                      if (i == 3 && result.tags.length > 4) {
-                        return _tagChip('+${result.tags.length - 3}', highlight: true);
-                      }
-                      return _tagChip(result.tags[i]);
-                    },
-                  ),
-                ),
-              const SizedBox(height: 10),
-              // Bottom: poster info + credits + request button
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Posted by ${result.posterName.isNotEmpty ? result.posterName : 'User'}',
+                  const SizedBox(height: 10),
+                  // Title row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          result.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color: HomePage.textMuted,
-                            fontSize: 12,
+                            color: HomePage.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
                           ),
                         ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            StarRating(
-                              rating: result.posterAverageRating,
-                              count: result.posterReviewCount,
-                              compact: true,
-                            ),
-                            if (result.posterCity.isNotEmpty) ...[
-                              const SizedBox(width: 8),
-                              const Icon(Icons.location_on_outlined,
-                                  size: 12, color: HomePage.textMuted),
-                              const SizedBox(width: 2),
-                              Text(
-                                result.posterCity,
-                                style: const TextStyle(
-                                  color: HomePage.textMuted,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      _badge(result.category, catColor),
+                    ],
                   ),
-                  SizedBox(
-                    height: 34,
-                    child: FilledButton.icon(
-                      onPressed: onRequest,
-                      icon: const Icon(Icons.swap_horiz, size: 16),
-                      label: const Text('Request', style: TextStyle(fontSize: 13)),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: HomePage.accent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                  const SizedBox(height: 8),
+                  // Description
+                  Expanded(
+                    child: Text(
+                      result.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: HomePage.textMuted,
+                        fontSize: 13,
+                        height: 1.5,
                       ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  // Tags row
+                  if (result.tags.isNotEmpty)
+                    SizedBox(
+                      height: 28,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: result.tags.length > 4 ? 4 : result.tags.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (_, i) {
+                          if (i == 3 && result.tags.length > 4) {
+                            return _tagChip('+${result.tags.length - 3}',
+                                highlight: true, categoryColor: catColor);
+                          }
+                          return _tagChip(result.tags[i], categoryColor: catColor);
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  // Bottom row
+                  Row(
+                    children: [
+                      _pill(result.difficulty, const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      _pill(result.delivery, HomePage.textMuted),
+                      const SizedBox(width: 8),
+                      _pill(
+                        '${result.estimatedHours.toStringAsFixed(result.estimatedHours == result.estimatedHours.roundToDouble() ? 0 : 1)}h',
+                        HomePage.textMuted,
+                      ),
+                      if (result.posterCity.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.location_on_outlined,
+                            size: 12, color: HomePage.textMuted),
+                        const SizedBox(width: 2),
+                        Text(
+                          result.posterCity,
+                          style: const TextStyle(
+                            color: HomePage.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      SizedBox(
+                        height: 34,
+                        child: FilledButton.icon(
+                          onPressed: onRequest,
+                          icon: const Icon(
+                              HugeIcons.strokeRoundedArrowDataTransferHorizontal,
+                              size: 16),
+                          label: const Text('Request',
+                              style: TextStyle(fontSize: 13)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: HomePage.accent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -634,22 +725,24 @@ class _SkillCard extends StatelessWidget {
     );
   }
 
-  static Widget _tagChip(String text, {bool highlight = false}) {
+  static Widget _tagChip(String text,
+      {bool highlight = false, Color? categoryColor}) {
+    final chipColor = categoryColor ?? HomePage.accent;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFF1A1333) : HomePage.surfaceAlt,
+        color: highlight
+            ? chipColor.withValues(alpha: 0.15)
+            : chipColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: highlight
-              ? HomePage.accent.withValues(alpha: 0.4)
-              : HomePage.line,
+          color: chipColor.withValues(alpha: 0.4),
         ),
       ),
       child: Text(
         text,
         style: TextStyle(
-          color: highlight ? HomePage.accentAlt : HomePage.textPrimary,
+          color: highlight ? chipColor : HomePage.textPrimary,
           fontSize: 12,
           fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
         ),
@@ -944,7 +1037,7 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 decoration: InputDecoration(
                   hintText: 'Search skills...',
                   prefixIcon: const Icon(
-                    Icons.search,
+                    HugeIcons.strokeRoundedSearch01,
                     color: HomePage.textMuted,
                   ),
                   filled: true,
@@ -972,7 +1065,7 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
             children: [
               IconButton(
                 tooltip: 'Notifications',
-                icon: const Icon(Icons.notifications_none_rounded),
+                icon: const Icon(HugeIcons.strokeRoundedNotification01),
                 onPressed: () {},
               ),
               Positioned(
@@ -991,7 +1084,7 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           IconButton(
             tooltip: 'Sign out',
-            icon: const Icon(Icons.logout),
+            icon: const Icon(HugeIcons.strokeRoundedLogout01),
             onPressed: () async {
               await B2CAuthService.instance.signOut();
               if (!context.mounted) return;

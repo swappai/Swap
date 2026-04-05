@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 
 import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
@@ -120,12 +121,27 @@ class _MySkillsPageState extends State<MySkillsPage> {
                             fontSize: 26,
                           ),
                         ),
+                        if (_skills != null && _skills!.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: HomePage.accent.withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: HomePage.accent.withValues(alpha: 0.4)),
+                            ),
+                            child: Text(
+                              '${_skills!.length}',
+                              style: const TextStyle(color: HomePage.accentAlt, fontSize: 12, fontWeight: FontWeight.w700),
+                            ),
+                          ),
+                        ],
                         const Spacer(),
                         SizedBox(
                           height: 42,
                           child: FilledButton.icon(
                             onPressed: _postNewSkill,
-                            icon: const Icon(Icons.add, size: 18),
+                            icon: const Icon(HugeIcons.strokeRoundedPlusSign, size: 18),
                             label: const Text('Post New Skill'),
                             style: FilledButton.styleFrom(
                               backgroundColor: HomePage.accent,
@@ -189,7 +205,7 @@ class _MySkillsPageState extends State<MySkillsPage> {
               CircleAvatar(
                 radius: 42,
                 backgroundColor: HomePage.surfaceAlt,
-                child: Icon(Icons.lightbulb_outline, color: HomePage.textMuted, size: 40),
+                child: Icon(HugeIcons.strokeRoundedIdea, color: HomePage.textMuted, size: 40),
               ),
               const SizedBox(height: 14),
               const Text(
@@ -210,7 +226,7 @@ class _MySkillsPageState extends State<MySkillsPage> {
                 height: 44,
                 child: FilledButton.icon(
                   onPressed: _postNewSkill,
-                  icon: const Icon(Icons.add, size: 18),
+                  icon: const Icon(HugeIcons.strokeRoundedPlusSign, size: 18),
                   label: const Text('Post Your First Skill'),
                   style: FilledButton.styleFrom(
                     backgroundColor: HomePage.accent,
@@ -240,80 +256,120 @@ class _SkillCard extends StatelessWidget {
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
+  static Color _categoryColor(String category) {
+    switch (category) {
+      case 'Design':
+        return const Color(0xFFE879F9);
+      case 'Development':
+      case 'Programming':
+        return const Color(0xFF60A5FA);
+      case 'Business':
+        return const Color(0xFF34D399);
+      case 'Music':
+        return const Color(0xFFFBBF24);
+      case 'Language':
+        return const Color(0xFFF87171);
+      case 'Writing':
+        return const Color(0xFF818CF8);
+      case 'Tutoring':
+        return const Color(0xFF2DD4BF);
+      case 'Cooking':
+        return const Color(0xFFFF9F43);
+      case 'Photography':
+        return const Color(0xFFFF6B6B);
+      case 'Marketing':
+        return const Color(0xFF48DBFB);
+      case 'Fitness':
+        return const Color(0xFF1DD1A1);
+      default:
+        return const Color(0xFF94A3B8);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    final catColor = _categoryColor(skill.category);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: HomePage.surface,
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
+        border: Border.all(color: HomePage.line),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    skill.title,
-                    style: const TextStyle(
-                      color: HomePage.textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 16,
+      clipBehavior: Clip.antiAlias,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Container(width: 4, color: catColor),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          skill.title,
+                          style: const TextStyle(
+                            color: HomePage.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                      _badge(skill.category, HomePage.accent),
+                      const SizedBox(width: 6),
+                      _badge(skill.difficulty, const Color(0xFFF59E0B)),
+                      const SizedBox(width: 12),
+                      _actionButton(HugeIcons.strokeRoundedEdit01, 'Edit', onEdit),
+                      const SizedBox(width: 4),
+                      _actionButton(HugeIcons.strokeRoundedDelete01, 'Delete', onDelete, color: Colors.red),
+                    ],
+                  ),
+                  if (skill.description.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      skill.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
                     ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      _infoPill(HugeIcons.strokeRoundedClock01, '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h'),
+                      const SizedBox(width: 8),
+                      _infoPill(HugeIcons.strokeRoundedLocation01, skill.delivery),
+                      if (skill.deliverables.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        _infoPill(HugeIcons.strokeRoundedCheckmarkCircle01, '${skill.deliverables.length} deliverable${skill.deliverables.length == 1 ? '' : 's'}'),
+                      ],
+                    ],
                   ),
-                ),
-                _badge(skill.category, HomePage.accent),
-                const SizedBox(width: 6),
-                _badge(skill.difficulty, const Color(0xFFF59E0B)),
-                const SizedBox(width: 12),
-                _actionButton(Icons.edit_outlined, 'Edit', onEdit),
-                const SizedBox(width: 4),
-                _actionButton(Icons.delete_outline, 'Delete', onDelete, color: Colors.red),
-              ],
-            ),
-            if (skill.description.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                skill.description,
-                maxLines: 3,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
-              ),
-            ],
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                _infoPill(Icons.schedule, '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h'),
-                const SizedBox(width: 8),
-                _infoPill(Icons.location_on_outlined, skill.delivery),
-                if (skill.deliverables.isNotEmpty) ...[
-                  const SizedBox(width: 8),
-                  _infoPill(Icons.check_circle_outline, '${skill.deliverables.length} deliverable${skill.deliverables.length == 1 ? '' : 's'}'),
+                  if (skill.tags.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: skill.tags.map((t) => Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(
+                          color: catColor.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: catColor.withValues(alpha: 0.3)),
+                        ),
+                        child: Text(t, style: const TextStyle(color: HomePage.textPrimary, fontSize: 11)),
+                      )).toList(),
+                    ),
+                  ],
                 ],
-              ],
-            ),
-            if (skill.tags.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: skill.tags.map((t) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: HomePage.surfaceAlt,
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: HomePage.line),
-                  ),
-                  child: Text(t, style: const TextStyle(color: HomePage.textPrimary, fontSize: 11)),
-                )).toList(),
               ),
-            ],
-          ],
-        ),
+            ),
+          ),
+        ],
       ),
     );
   }

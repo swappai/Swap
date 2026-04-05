@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/b2c_auth_service.dart';
@@ -10,7 +9,6 @@ import '../widgets/app_sidebar.dart';
 const Color _bg = Color(0xFF08080A);
 const Color _surface = Color(0xFF111216);
 const Color _card = Color(0xFF16171C);
-const Color _cardHover = Color(0xFF1C1D24);
 const Color _border = Color(0xFF232530);
 const Color _borderFocus = Color(0xFF6D5BF7);
 const Color _accent = Color(0xFF6D5BF7);

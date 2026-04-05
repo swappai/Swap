@@ -66,6 +66,7 @@ class AzureSearchService:
             SearchableField(name="services_needed", type=SearchFieldDataType.String),
             SimpleField(name="dm_open", type=SearchFieldDataType.Boolean, filterable=True),
             SimpleField(name="show_city", type=SearchFieldDataType.Boolean, filterable=True),
+            SimpleField(name="account_type", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="swap_credits", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             SimpleField(name="swaps_completed", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             SimpleField(name="average_rating", type=SearchFieldDataType.Double, filterable=True, sortable=True),
@@ -138,6 +139,7 @@ class AzureSearchService:
             "services_needed": payload.get("services_needed", ""),
             "dm_open": payload.get("dm_open", True),
             "show_city": payload.get("show_city", True),
+            "account_type": payload.get("account_type", "person"),
             "swap_credits": payload.get("swap_credits", 0) or 0,
             "swaps_completed": payload.get("swaps_completed", 0) or 0,
             "average_rating": float(payload.get("average_rating", 0) or 0),
@@ -198,6 +200,7 @@ class AzureSearchService:
                     "services_needed": result.get("services_needed"),
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
+                    "account_type": result.get("account_type", "person"),
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
                     "average_rating": result.get("average_rating", 0),
@@ -254,6 +257,7 @@ class AzureSearchService:
                     "services_needed": result.get("services_needed"),
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
+                    "account_type": result.get("account_type", "person"),
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
                     "average_rating": result.get("average_rating", 0),
@@ -306,6 +310,7 @@ class SkillsSearchService:
             SimpleField(name="poster_swap_credits", type=SearchFieldDataType.Int32, sortable=True),
             SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
             SimpleField(name="poster_review_count", type=SearchFieldDataType.Int32, sortable=True),
+            SimpleField(name="poster_account_type", type=SearchFieldDataType.String, filterable=True),
             SearchField(
                 name="skill_vec",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
@@ -353,6 +358,7 @@ class SkillsSearchService:
             "poster_swap_credits": payload.get("poster_swap_credits", 0) or 0,
             "poster_average_rating": float(payload.get("poster_average_rating", 0) or 0),
             "poster_review_count": int(payload.get("poster_review_count", 0) or 0),
+            "poster_account_type": payload.get("poster_account_type", "person"),
             "skill_vec": skill_vec,
         }
         self.search_client.merge_or_upload_documents([document])
@@ -406,6 +412,7 @@ class SkillsSearchService:
                     "poster_swap_credits": result.get("poster_swap_credits", 0),
                     "poster_average_rating": result.get("poster_average_rating", 0),
                     "poster_review_count": result.get("poster_review_count", 0),
+                    "poster_account_type": result.get("poster_account_type", "person"),
                     "score": score,
                 })
 

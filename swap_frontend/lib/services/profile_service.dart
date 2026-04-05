@@ -37,6 +37,7 @@ class ProfileService {
     bool? dmOpen,
     bool? emailUpdates,
     bool? showCity,
+    String accountType = 'person',
     Duration? timeout,
   }) async {
     // Allow empty skillsToOffer — the backend handles it as Optional.
@@ -67,6 +68,7 @@ class ProfileService {
     if (dmOpen != null) bodyMap['dm_open'] = dmOpen;
     if (emailUpdates != null) bodyMap['email_updates'] = emailUpdates;
     if (showCity != null) bodyMap['show_city'] = showCity;
+    if (accountType.isNotEmpty) bodyMap['account_type'] = accountType;
     final body = jsonEncode(bodyMap);
 
     debugPrint('[ProfileService] POST $uri headers=$headers body=$bodyMap');

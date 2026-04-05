@@ -30,6 +30,7 @@ class ProfileBase(BaseModel):
     dm_open: Optional[bool] = Field(True, description="Direct messages open")
     email_updates: Optional[bool] = Field(True, description="Email updates enabled")
     show_city: Optional[bool] = Field(True, description="Show city publicly")
+    account_type: Optional[str] = Field("person", description="Account type: person or business")
 
 
 class ProfileCreate(ProfileBase):
@@ -54,6 +55,7 @@ class ProfileUpdate(BaseModel):
     dm_open: Optional[bool] = None
     email_updates: Optional[bool] = None
     show_city: Optional[bool] = None
+    account_type: Optional[str] = None
 
 
 class ProfileResponse(ProfileBase):
@@ -181,6 +183,7 @@ class SkillSearchResult(BaseModel):
     poster_swap_credits: int = 0
     poster_average_rating: float = 0.0
     poster_review_count: int = 0
+    poster_account_type: str = "person"
     score: float = 0.0
 
 

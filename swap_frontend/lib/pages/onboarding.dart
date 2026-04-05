@@ -1,6 +1,7 @@
 // lib/pages/profile_setup_flow.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'dart:async'; // for TimeoutException
 import 'package:image_picker/image_picker.dart';
 import '../services/b2c_auth_service.dart';
@@ -36,6 +37,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
   final _city = TextEditingController();
 
   String? _timezone;
+  String _accountType = 'person'; // 'person' or 'business'
   int _step = 0;
 
   // Avatar sources
@@ -129,8 +131,8 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
   }
 
   void _next() {
-    if (_step == 0 && !_formKey.currentState!.validate()) return;
-    if (_step < 3) {
+    if (_step == 1 && !_formKey.currentState!.validate()) return;
+    if (_step < 4) {
       setState(() => _step++);
     } else {
       _submit();
@@ -186,6 +188,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
         dmOpen: _dmOpen,
         emailUpdates: _emailUpdates,
         showCity: _showCity,
+        accountType: _accountType,
         timeout: const Duration(seconds: 12),
       );
 
@@ -208,7 +211,7 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
 
   @override
   Widget build(BuildContext context) {
-    final stepsTotal = 4;
+    final stepsTotal = 5;
     final progress = (_step + 1) / stepsTotal;
 
     final theme = ThemeData(
@@ -329,8 +332,13 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                           child: AnimatedSwitcher(
                             duration: const Duration(milliseconds: 220),
                             child: switch (_step) {
-                              0 => _StepProfile(
+                              0 => _StepAccountType(
                                 key: const ValueKey('step0'),
+                                accountType: _accountType,
+                                onChanged: (v) => setState(() => _accountType = v),
+                              ),
+                              1 => _StepProfile(
+                                key: const ValueKey('step1'),
                                 formKey: _formKey,
                                 fullName: _fullName,
                                 username: _username,
@@ -344,8 +352,8 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                                 existingPhotoUrl: _existingPhotoUrl,
                                 onPickAvatar: _pickAvatar,
                               ),
-                              1 => _StepSkillsForm(
-                                key: const ValueKey('step1'),
+                              2 => _StepSkillsForm(
+                                key: const ValueKey('step2'),
                                 title: 'Skills to Offer',
                                 subtitle:
                                     'What can you teach? Be specific about your experience level and what you can help with.',
@@ -360,8 +368,8 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                                     ..addAll(list),
                                 ),
                               ),
-                              2 => _StepSkillsForm(
-                                key: const ValueKey('step2'),
+                              3 => _StepSkillsForm(
+                                key: const ValueKey('step3'),
                                 title: 'Services You Need',
                                 subtitle:
                                     'What do you want to learn or get help with? Add as many as you want.',
@@ -376,8 +384,8 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                                     ..addAll(list),
                                 ),
                               ),
-                              3 => _StepPreferences(
-                                key: const ValueKey('step3'),
+                              4 => _StepPreferences(
+                                key: const ValueKey('step4'),
                                 dmOpen: _dmOpen,
                                 emailUpdates: _emailUpdates,
                                 showCity: _showCity,
@@ -409,10 +417,10 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
                         FilledButton.icon(
                           onPressed: _next,
                           icon: Icon(
-                            _step < 3 ? Icons.arrow_forward : Icons.check,
+                            _step < 4 ? Icons.arrow_forward : Icons.check,
                           ),
                           label: Text(
-                            _step < 3 ? 'Continue' : 'Complete Setup',
+                            _step < 4 ? 'Continue' : 'Complete Setup',
                           ),
                         ),
                       ],
@@ -488,10 +496,11 @@ class _StepHeader extends StatelessWidget {
       runSpacing: 8,
       alignment: WrapAlignment.center,
       children: [
-        pill('Profile', 0),
-        pill('Skills to Offer', 1),
-        pill('Services You Need', 2),
-        pill('Preferences', 3),
+        pill('Account Type', 0),
+        pill('Profile', 1),
+        pill('Skills to Offer', 2),
+        pill('Services You Need', 3),
+        pill('Preferences', 4),
       ],
     );
   }
@@ -1011,6 +1020,141 @@ class _StepPreferences extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+class _StepAccountType extends StatelessWidget {
+  final String accountType;
+  final ValueChanged<String> onChanged;
+
+  const _StepAccountType({
+    super.key,
+    required this.accountType,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Account Type', style: Theme.of(context).textTheme.titleLarge),
+        const SizedBox(height: 4),
+        Text(
+          'Are you joining as an individual or a business?',
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(
+              child: _AccountTypeCard(
+                icon: HugeIcons.strokeRoundedUser,
+                label: 'Person',
+                description: 'Individual offering personal skills and services',
+                selected: accountType == 'person',
+                onTap: () => onChanged('person'),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _AccountTypeCard(
+                icon: HugeIcons.strokeRoundedStore01,
+                label: 'Business',
+                description: 'Company or organization offering professional services',
+                selected: accountType == 'business',
+                onTap: () => onChanged('business'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _AccountTypeCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String description;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _AccountTypeCard({
+    required this.icon,
+    required this.label,
+    required this.description,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: selected
+                ? _ProfileSetupFlowState.accentSoft
+                : _ProfileSetupFlowState.surfaceAlt,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected
+                  ? _ProfileSetupFlowState.accent
+                  : _ProfileSetupFlowState.line,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: selected
+                    ? _ProfileSetupFlowState.accent.withValues(alpha: 0.2)
+                    : _ProfileSetupFlowState.card,
+                child: Icon(
+                  icon,
+                  size: 32,
+                  color: selected
+                      ? _ProfileSetupFlowState.accentAlt
+                      : _ProfileSetupFlowState.textMuted,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : _ProfileSetupFlowState.textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                description,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: _ProfileSetupFlowState.textMuted,
+                  fontSize: 12,
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(height: 8),
+                Icon(
+                  HugeIcons.strokeRoundedCheckmarkCircle01,
+                  color: _ProfileSetupFlowState.accentAlt,
+                  size: 24,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

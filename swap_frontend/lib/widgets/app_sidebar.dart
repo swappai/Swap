@@ -1,5 +1,6 @@
 // lib/widgets/app_sidebar.dart
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../pages/post_skill_page.dart';
 import '../pages/my_skills_page.dart';
 import '../pages/home_page.dart';
@@ -74,7 +75,7 @@ class _AppSidebarState extends State<AppSidebar> {
           Divider(color: HomePage.line, height: 1),
           const SizedBox(height: 12),
           _NavItem(
-            icon: Icons.home_rounded,
+            icon: HugeIcons.strokeRoundedHome01,
             label: 'Home',
             active: isActive('Home'),
             onTap: () => Navigator.of(context).pushAndRemoveUntil(
@@ -83,7 +84,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ),
           ),
           _NavItem(
-            icon: Icons.add_circle_outline,
+            icon: HugeIcons.strokeRoundedPlusSign,
             label: 'Post Skill',
             active: isActive('Post Skill'),
             onTap: () => Navigator.of(
@@ -91,7 +92,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ).push(MaterialPageRoute(builder: (_) => const PostSkillPage())),
           ),
           _NavItem(
-            icon: Icons.list_alt_outlined,
+            icon: HugeIcons.strokeRoundedTask01,
             label: 'My Skills',
             active: isActive('My Skills'),
             onTap: () => Navigator.of(context).push(
@@ -99,7 +100,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ),
           ),
           _NavItem(
-            icon: Icons.inbox_outlined,
+            icon: HugeIcons.strokeRoundedInbox,
             label: 'Requests',
             active: isActive('Requests'),
             onTap: () => Navigator.of(
@@ -107,7 +108,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ).push(MaterialPageRoute(builder: (_) => const RequestsPage())),
           ),
           _NavItem(
-            icon: Icons.chat_bubble_outline,
+            icon: HugeIcons.strokeRoundedMessage01,
             label: 'Messages',
             badge: _unreadCount > 0 ? '$_unreadCount' : null,
             active: isActive('Messages'),
@@ -116,7 +117,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ).push(MaterialPageRoute(builder: (_) => const ConversationsPage())),
           ),
           _NavItem(
-            icon: Icons.analytics_outlined,
+            icon: HugeIcons.strokeRoundedAnalytics01,
             label: 'Dashboard',
             active: isActive('Dashboard'),
             onTap: () => Navigator.of(context).push(
@@ -124,7 +125,7 @@ class _AppSidebarState extends State<AppSidebar> {
             ),
           ),
           _NavItem(
-            icon: Icons.person_outline,
+            icon: HugeIcons.strokeRoundedUser,
             label: 'Profile',
             active: isActive('Profile'),
             onTap: () => Navigator.of(
@@ -133,7 +134,7 @@ class _AppSidebarState extends State<AppSidebar> {
           ),
           const Spacer(),
           _NavItem(
-            icon: Icons.logout_rounded,
+            icon: HugeIcons.strokeRoundedLogout01,
             label: 'Log Out',
             onTap: () async {
               await B2CAuthService.instance.signOut();
