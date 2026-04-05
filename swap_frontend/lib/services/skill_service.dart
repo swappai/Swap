@@ -145,6 +145,22 @@ class SkillService {
     return Skill.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
   }
 
+  /// Update an existing skill.
+  Future<Skill> updateSkill(String skillId, String uid, Map<String, dynamic> data) async {
+    final uri = Uri.parse('$baseUrl/skills/$skillId').replace(
+      queryParameters: {'uid': uid},
+    );
+    debugPrint('SkillService: PUT $uri');
+    final headers = await _getHeaders();
+    final resp = await http
+        .put(uri, headers: headers, body: jsonEncode(data))
+        .timeout(const Duration(seconds: 15));
+    if (resp.statusCode != 200) {
+      throw Exception('Failed to update skill: ${resp.statusCode} ${resp.body}');
+    }
+    return Skill.fromJson(jsonDecode(resp.body) as Map<String, dynamic>);
+  }
+
   /// Delete a skill.
   Future<void> deleteSkill(String skillId, String uid) async {
     final uri = Uri.parse('$baseUrl/skills/$skillId').replace(

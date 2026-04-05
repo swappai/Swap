@@ -61,7 +61,6 @@ def _enrich_swap_request(request_data: dict) -> SwapRequestResponse:
         **request_data,
         requester_profile=requester_profile,
         recipient_profile=recipient_profile,
-        completion=completion_data,
     )
 
 

@@ -58,9 +58,11 @@ class ProfileUpdate(BaseModel):
 
 class ProfileResponse(ProfileBase):
     """Schema for profile responses."""
-    
+
     created_at: datetime
     updated_at: Optional[datetime] = None
+    average_rating: float = 0.0
+    review_count: int = 0
     
     class Config:
         from_attributes = True
@@ -104,6 +106,8 @@ class ProfileSearchResult(BaseModel):
     show_city: Optional[bool]
     swap_credits: int = Field(0, description="Total swap credits earned (trust indicator)")
     swaps_completed: int = Field(0, description="Number of completed swaps")
+    average_rating: float = Field(0.0, description="Average review rating")
+    review_count: int = Field(0, description="Number of reviews received")
     score: float = Field(..., description="Similarity score (0-1)")
 
 
@@ -129,6 +133,18 @@ class SkillCreate(BaseModel):
     delivery: str = Field("Remote Only", description="Delivery method")
     tags: List[str] = Field(default_factory=list, description="Tags")
     deliverables: List[str] = Field(default_factory=list, description="Deliverables")
+
+
+class SkillUpdate(BaseModel):
+    """Schema for updating a skill (all fields optional for partial update)."""
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    description: Optional[str] = Field(None, min_length=1, max_length=2000)
+    category: Optional[str] = None
+    difficulty: Optional[str] = None
+    estimated_hours: Optional[float] = Field(None, gt=0, le=100)
+    delivery: Optional[str] = None
+    tags: Optional[List[str]] = None
+    deliverables: Optional[List[str]] = None
 
 
 class SkillResponse(BaseModel):
@@ -163,6 +179,8 @@ class SkillSearchResult(BaseModel):
     poster_name: str = ""
     poster_city: str = ""
     poster_swap_credits: int = 0
+    poster_average_rating: float = 0.0
+    poster_review_count: int = 0
     score: float = 0.0
 
 
@@ -425,4 +443,37 @@ class PointsSpendRequest(BaseModel):
     """Schema for spending points."""
     reason: PointsTransactionReason
     duration_hours: Optional[int] = Field(None, ge=1, le=168, description="Duration for priority boost")
+
+
+# =============================================================================
+# Review Schemas
+# =============================================================================
+
+class ReviewCreate(BaseModel):
+    """Schema for creating a review."""
+    swap_request_id: str = Field(..., description="ID of the completed swap")
+    rating: int = Field(..., ge=1, le=5, description="Rating 1-5")
+    review_text: Optional[str] = Field(None, max_length=2000, description="Review text")
+
+
+class ReviewResponse(BaseModel):
+    """Schema for review responses."""
+    id: str
+    swap_request_id: str
+    reviewer_uid: str
+    reviewed_uid: str
+    rating: int
+    review_text: Optional[str] = None
+    skill_exchanged: Optional[str] = None
+    hours_exchanged: Optional[float] = None
+    created_at: str
+    reviewer_name: Optional[str] = None
+    reviewer_photo: Optional[str] = None
+
+
+class ReviewListResponse(BaseModel):
+    """Paginated review list with aggregate stats."""
+    reviews: List[ReviewResponse]
+    total: int
+    average_rating: float = 0.0
 

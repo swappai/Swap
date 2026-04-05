@@ -1,6 +1,7 @@
 // lib/widgets/app_sidebar.dart
 import 'package:flutter/material.dart';
 import '../pages/post_skill_page.dart';
+import '../pages/my_skills_page.dart';
 import '../pages/home_page.dart';
 import '../pages/landing_page.dart';
 import '../pages/profile_page.dart';
@@ -90,6 +91,14 @@ class _AppSidebarState extends State<AppSidebar> {
             ).push(MaterialPageRoute(builder: (_) => const PostSkillPage())),
           ),
           _NavItem(
+            icon: Icons.list_alt_outlined,
+            label: 'My Skills',
+            active: isActive('My Skills'),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const MySkillsPage()),
+            ),
+          ),
+          _NavItem(
             icon: Icons.inbox_outlined,
             label: 'Requests',
             active: isActive('Requests'),
@@ -135,68 +144,7 @@ class _AppSidebarState extends State<AppSidebar> {
               );
             },
           ),
-          const SizedBox(height: 4),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0x151A1333),
-                border: Border.all(color: HomePage.line),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Share Your Skills',
-                      style: TextStyle(
-                        color: HomePage.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Start earning by helping others learn',
-                      style: TextStyle(color: HomePage.textMuted, fontSize: 12),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: FilledButton(
-                      onPressed: () {
-                        final currentRoute = ModalRoute.of(
-                          context,
-                        )?.settings.name;
-                        if (currentRoute != 'post_skill') {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const PostSkillPage(),
-                              settings: const RouteSettings(name: 'post_skill'),
-                            ),
-                          );
-                        }
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: HomePage.accent,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Post a Skill'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const SizedBox(height: 16),
         ],
       ),
     );

@@ -1,35 +1,47 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
 import 'home_page.dart';
 import '../widgets/app_sidebar.dart';
 
-// Color palette used throughout the page
-const Color backgroundColor = Color(0xFF0F0F11);
-const Color cardColor = Color(0xFF1A1A1D);
-const Color accentPurple = Color(0xFF8B5CF6);
-const Color textColor = Colors.white;
+// ─── Palette ────────────────────────────────────────────────────────────────
+const Color _bg = Color(0xFF08080A);
+const Color _surface = Color(0xFF111216);
+const Color _card = Color(0xFF16171C);
+const Color _cardHover = Color(0xFF1C1D24);
+const Color _border = Color(0xFF232530);
+const Color _borderFocus = Color(0xFF6D5BF7);
+const Color _accent = Color(0xFF6D5BF7);
+const Color _accentGlow = Color(0xFF8B7AFF);
+const Color _accentSoft = Color(0xFF2A2350);
+const Color _teal = Color(0xFF34D399);
+const Color _amber = Color(0xFFD97706);
+const Color _rose = Color(0xFFF43F5E);
+const Color _textPrimary = Color(0xFFF0F0F8);
+const Color _textSecondary = Color(0xFF9CA3AF);
+const Color _textDim = Color(0xFF6B7280);
 
 class PostSkillPage extends StatefulWidget {
-  const PostSkillPage({super.key});
+  final Skill? existingSkill;
+  const PostSkillPage({super.key, this.existingSkill});
 
   @override
   State<PostSkillPage> createState() => _PostSkillPageState();
 }
 
-class _PostSkillPageState extends State<PostSkillPage> {
+class _PostSkillPageState extends State<PostSkillPage>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  bool _showPreview = false;
   bool _publishing = false;
+  int _step = 0; // 0 = essentials, 1 = details, 2 = review
 
-  // Controllers / state
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _descriptionController = TextEditingController();
-  final TextEditingController _hoursController = TextEditingController(
-    text: '1',
-  );
-  final TextEditingController _tagController = TextEditingController();
-  final TextEditingController _deliverableController = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _descCtrl = TextEditingController();
+  final _hoursCtrl = TextEditingController(text: '1');
+  final _tagCtrl = TextEditingController();
+  final _deliverableCtrl = TextEditingController();
 
   String? _category;
   String? _difficulty;
@@ -37,60 +49,103 @@ class _PostSkillPageState extends State<PostSkillPage> {
   final List<String> _tags = [];
   final List<String> _deliverables = [];
 
-  final List<String> _categories = [
-    'Design',
-    'Development',
-    'Business',
-    'Music',
-    'Other',
+  late final AnimationController _pulseCtrl;
+  late final Animation<double> _pulse;
+
+  static const _categories = [
+    ('Design', Icons.brush_outlined, Color(0xFFE879F9)),
+    ('Development', Icons.code_outlined, Color(0xFF60A5FA)),
+    ('Business', Icons.trending_up_outlined, Color(0xFF34D399)),
+    ('Music', Icons.music_note_outlined, Color(0xFFFBBF24)),
+    ('Language', Icons.translate_outlined, Color(0xFFF87171)),
+    ('Writing', Icons.edit_note_outlined, Color(0xFF818CF8)),
+    ('Tutoring', Icons.school_outlined, Color(0xFF2DD4BF)),
+    ('Other', Icons.category_outlined, Color(0xFF94A3B8)),
   ];
-  final List<String> _levels = ['Beginner', 'Intermediate', 'Advanced'];
-  final List<String> _deliveryOptions = ['Remote Only', 'In-Person', 'Hybrid'];
+  static const _levels = ['Beginner', 'Intermediate', 'Advanced'];
+  static const _deliveryOptions = ['Remote Only', 'In-Person', 'Hybrid'];
+
+  bool get _isEditing => widget.existingSkill != null;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2000),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    final skill = widget.existingSkill;
+    if (skill != null) {
+      _titleCtrl.text = skill.title;
+      _descCtrl.text = skill.description;
+      _hoursCtrl.text = skill.estimatedHours.toString();
+      _category = skill.category.isNotEmpty ? skill.category : null;
+      _difficulty = skill.difficulty.isNotEmpty ? skill.difficulty : null;
+      _delivery = skill.delivery;
+      _tags.addAll(skill.tags);
+      _deliverables.addAll(skill.deliverables);
+    }
+  }
 
   @override
   void dispose() {
-    _titleController.dispose();
-    _descriptionController.dispose();
-    _hoursController.dispose();
-    _tagController.dispose();
-    _deliverableController.dispose();
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    _hoursCtrl.dispose();
+    _tagCtrl.dispose();
+    _deliverableCtrl.dispose();
+    _pulseCtrl.dispose();
     super.dispose();
   }
 
-  bool get _canPublish =>
-      _titleController.text.trim().isNotEmpty &&
-      _descriptionController.text.trim().isNotEmpty &&
-      _category != null &&
-      _difficulty != null;
+  bool get _step0Valid =>
+      _titleCtrl.text.trim().isNotEmpty &&
+      _descCtrl.text.trim().isNotEmpty &&
+      _category != null;
+
+  bool get _step1Valid => _difficulty != null;
+
+  bool get _canPublish => _step0Valid && _step1Valid;
+
+  int get _completionPercent {
+    int score = 0;
+    if (_titleCtrl.text.trim().isNotEmpty) score += 15;
+    if (_descCtrl.text.trim().length > 20) score += 15;
+    if (_category != null) score += 15;
+    if (_difficulty != null) score += 15;
+    if (_tags.isNotEmpty) score += 10;
+    if (_deliverables.isNotEmpty) score += 10;
+    if (double.tryParse(_hoursCtrl.text) != null) score += 10;
+    if (_descCtrl.text.trim().length > 80) score += 10;
+    return score.clamp(0, 100);
+  }
 
   void _addTag() {
-    final v = _tagController.text.trim();
-    if (v.isNotEmpty) {
+    final v = _tagCtrl.text.trim();
+    if (v.isNotEmpty && !_tags.contains(v)) {
       setState(() {
         _tags.add(v);
-        _tagController.clear();
+        _tagCtrl.clear();
       });
     }
   }
 
   void _addDeliverable() {
-    final v = _deliverableController.text.trim();
+    final v = _deliverableCtrl.text.trim();
     if (v.isNotEmpty) {
       setState(() {
         _deliverables.add(v);
-        _deliverableController.clear();
+        _deliverableCtrl.clear();
       });
     }
   }
 
   Future<void> _publish() async {
-    if (!_canPublish) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please complete the required fields.')),
-      );
-      return;
-    }
-
+    if (!_canPublish) return;
     final user = B2CAuthService.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -100,27 +155,36 @@ class _PostSkillPageState extends State<PostSkillPage> {
     }
 
     setState(() => _publishing = true);
-
     try {
-      await SkillService().createSkill(user.uid, {
-        'title': _titleController.text.trim(),
-        'description': _descriptionController.text.trim(),
+      final skillData = {
+        'title': _titleCtrl.text.trim(),
+        'description': _descCtrl.text.trim(),
         'category': _category,
         'difficulty': _difficulty,
-        'estimated_hours': double.tryParse(_hoursController.text) ?? 1,
+        'estimated_hours': double.tryParse(_hoursCtrl.text) ?? 1,
         'delivery': _delivery,
         'tags': _tags,
         'deliverables': _deliverables,
-      });
+      };
+
+      if (_isEditing) {
+        await SkillService().updateSkill(
+          widget.existingSkill!.id,
+          user.uid,
+          skillData,
+        );
+      } else {
+        await SkillService().createSkill(user.uid, skillData);
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Skill posted to \$wap!'),
-          backgroundColor: Colors.green,
+        SnackBar(
+          content: Text(_isEditing ? 'Skill updated!' : 'Skill posted!'),
+          backgroundColor: _teal,
         ),
       );
-      await Future.delayed(const Duration(milliseconds: 600));
+      await Future.delayed(const Duration(milliseconds: 500));
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const HomePage()),
@@ -129,7 +193,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to post skill: $e')),
+        SnackBar(content: Text('Failed: $e')),
       );
     } finally {
       if (mounted) setState(() => _publishing = false);
@@ -138,1117 +202,1223 @@ class _PostSkillPageState extends State<PostSkillPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Page theme overlays Theme.of(context) but keeps dark background
-    final pageTheme = Theme.of(context).copyWith(
-      scaffoldBackgroundColor: backgroundColor,
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: cardColor.withValues(alpha: .6),
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: Colors.white12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: accentPurple, width: 2),
-        ),
-        hintStyle: const TextStyle(color: Colors.white70),
-      ),
-      textTheme: Theme.of(
-        context,
-      ).textTheme.apply(bodyColor: textColor, displayColor: textColor),
-      colorScheme: Theme.of(
-        context,
-      ).colorScheme.copyWith(primary: accentPurple, secondary: accentPurple),
-    );
-
-    return Theme(
-      data: pageTheme,
-      child: Scaffold(
-        backgroundColor: backgroundColor,
-        body: SafeArea(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ✅ Use the shared sidebar everywhere
-              const AppSidebar(active: 'Post Skill'),
-
-              // Main content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 16,
-                  ),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 960),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 8),
-                          // Top bar with NO notification icon
-                          const _TopBarNoNotifications(),
-                          const SizedBox(height: 18),
-
-                          const Text(
-                            'Share Your Skills',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: textColor,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Help others learn while building your reputation in our community',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          const SizedBox(height: 20),
-
-                          LayoutBuilder(
-                            builder: (context, constraints) {
-                              final isWide = constraints.maxWidth >= 760;
-                              if (isWide) {
-                                return Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Left: form cards
-                                    Expanded(
-                                      flex: 3,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          SectionCard(
-                                            title: 'Basic Information',
-                                            leading: Container(
-                                              width: 36,
-                                              height: 36,
-                                              decoration: const BoxDecoration(
-                                                color: Colors.white10,
-                                                borderRadius: BorderRadius.all(
-                                                  Radius.circular(8),
-                                                ),
-                                              ),
-                                              child: const Center(
-                                                child: Icon(
-                                                  Icons.auto_awesome,
-                                                  color: Color(0xFF7EEAD3),
-                                                ),
-                                              ),
-                                            ),
-                                            child: _buildBasicInfoCardContent(),
-                                          ),
-                                          const SizedBox(height: 28),
-                                          SectionCard(
-                                            title: 'Details & Logistics',
-                                            leading: const Icon(
-                                              Icons.access_time,
-                                              color: accentPurple,
-                                            ),
-                                            child: _buildDetailsCardContent(),
-                                          ),
-                                          const SizedBox(height: 12),
-                                          Row(
-                                            children: [
-                                              OutlinedButton.icon(
-                                                onPressed: () => setState(
-                                                  () => _showPreview =
-                                                      !_showPreview,
-                                                ),
-                                                icon: const Icon(
-                                                  Icons.remove_red_eye,
-                                                ),
-                                                label: Text(
-                                                  _showPreview
-                                                      ? 'Hide Preview'
-                                                      : 'Preview',
-                                                ),
-                                                style: OutlinedButton.styleFrom(
-                                                  side: const BorderSide(
-                                                    color: accentPurple,
-                                                  ),
-                                                  foregroundColor: accentPurple,
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 18,
-                                                        vertical: 14,
-                                                      ),
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          12,
-                                                        ),
-                                                  ),
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-                                              Expanded(
-                                                child: ElevatedButton(
-                                                  onPressed: _canPublish && !_publishing
-                                                      ? _publish
-                                                      : null,
-                                                  style: ButtonStyle(
-                                                    backgroundColor:
-                                                        WidgetStateProperty.resolveWith<
-                                                          Color?
-                                                        >(
-                                                          (states) =>
-                                                              states.contains(
-                                                                WidgetState
-                                                                    .disabled,
-                                                              )
-                                                              ? accentPurple
-                                                                    .withValues(
-                                                                      alpha: 0.45,
-                                                                    )
-                                                              : accentPurple,
-                                                        ),
-                                                    foregroundColor:
-                                                        WidgetStateProperty.resolveWith<
-                                                          Color?
-                                                        >(
-                                                          (states) =>
-                                                              states.contains(
-                                                                WidgetState
-                                                                    .disabled,
-                                                              )
-                                                              ? Colors.white70
-                                                              : Colors.white,
-                                                        ),
-                                                    padding:
-                                                        WidgetStateProperty.all(
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 26,
-                                                            vertical: 14,
-                                                          ),
-                                                        ),
-                                                    shape: WidgetStateProperty.all(
-                                                      RoundedRectangleBorder(
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              12,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  child: const Text(
-                                                    'Publish Skill →',
-                                                    style: TextStyle(
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 20),
-
-                                    // Right: tips + optional preview
-                                    SizedBox(
-                                      width: 320,
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.stretch,
-                                        children: [
-                                          const ProTipsPanel(),
-                                          const SizedBox(height: 28),
-                                          if (_showPreview)
-                                            PreviewCard(
-                                              title: _titleController.text,
-                                              description:
-                                                  _descriptionController.text,
-                                              category: _category ?? 'Category',
-                                              hours: _hoursController.text,
-                                              mode: _delivery,
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }
-
-                              // Narrow layout
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
+    return Scaffold(
+      backgroundColor: _bg,
+      body: SafeArea(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AppSidebar(active: 'Post Skill'),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth >= 900;
+                  return SingleChildScrollView(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isWide ? 40 : 20,
+                      vertical: 24,
+                    ),
+                    child: Center(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 1100),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _buildHeader(),
+                            const SizedBox(height: 28),
+                            _buildStepIndicator(),
+                            const SizedBox(height: 28),
+                            if (isWide)
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  SectionCard(
-                                    title: 'Basic Information',
-                                    leading: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white10,
-                                        borderRadius: BorderRadius.all(
-                                          Radius.circular(8),
-                                        ),
-                                      ),
-                                      child: const Center(
-                                        child: Icon(
-                                          Icons.auto_awesome,
-                                          color: Color(0xFF7EEAD3),
-                                        ),
-                                      ),
-                                    ),
-                                    child: _buildBasicInfoCardContent(),
+                                  Expanded(
+                                    flex: 5,
+                                    child: _buildCurrentStep(),
                                   ),
-                                  const SizedBox(height: 16),
-                                  SectionCard(
-                                    title: 'Details & Logistics',
-                                    leading: const Icon(
-                                      Icons.access_time,
-                                      color: accentPurple,
-                                    ),
-                                    child: _buildDetailsCardContent(),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  const ProTipsPanel(),
-                                  const SizedBox(height: 16),
-                                  if (_showPreview)
-                                    PreviewCard(
-                                      title: _titleController.text,
-                                      description: _descriptionController.text,
-                                      category: _category ?? 'Category',
-                                      hours: _hoursController.text,
-                                      mode: _delivery,
-                                    ),
-                                  const SizedBox(height: 12),
-                                  Row(
-                                    children: [
-                                      OutlinedButton.icon(
-                                        onPressed: () => setState(
-                                          () => _showPreview = !_showPreview,
-                                        ),
-                                        icon: const Icon(Icons.remove_red_eye),
-                                        label: Text(
-                                          _showPreview
-                                              ? 'Hide Preview'
-                                              : 'Preview',
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          side: const BorderSide(
-                                            color: accentPurple,
-                                          ),
-                                          foregroundColor: accentPurple,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 18,
-                                            vertical: 14,
-                                          ),
-                                          shape: RoundedRectangleBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: ElevatedButton(
-                                          onPressed: _canPublish && !_publishing
-                                              ? _publish
-                                              : null,
-                                          style: ButtonStyle(
-                                            backgroundColor:
-                                                WidgetStateProperty.resolveWith<
-                                                  Color?
-                                                >(
-                                                  (states) =>
-                                                      states.contains(
-                                                        WidgetState.disabled,
-                                                      )
-                                                      ? accentPurple
-                                                            .withValues(alpha: 0.45)
-                                                      : accentPurple,
-                                                ),
-                                            foregroundColor:
-                                                WidgetStateProperty.resolveWith<
-                                                  Color?
-                                                >(
-                                                  (states) =>
-                                                      states.contains(
-                                                        WidgetState.disabled,
-                                                      )
-                                                      ? Colors.white70
-                                                      : Colors.white,
-                                                ),
-                                            padding: WidgetStateProperty.all(
-                                              const EdgeInsets.symmetric(
-                                                horizontal: 26,
-                                                vertical: 14,
-                                              ),
-                                            ),
-                                            shape: WidgetStateProperty.all(
-                                              RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(12),
-                                              ),
-                                            ),
-                                          ),
-                                          child: const Text(
-                                            'Publish Skill →',
-                                            style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  const SizedBox(width: 28),
+                                  SizedBox(
+                                    width: 340,
+                                    child: _buildSidePanel(),
                                   ),
                                 ],
-                              );
-                            },
-                          ),
-                        ],
+                              )
+                            else
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  _buildCurrentStep(),
+                                  const SizedBox(height: 24),
+                                  _buildSidePanel(),
+                                ],
+                              ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  // ------------------ Basic Info card content ------------------
-  Widget _buildBasicInfoCardContent() {
-    return Form(
-      key: _formKey,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Skill Title *',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _titleController,
-            textInputAction: TextInputAction.next,
-            onChanged: (_) => setState(() {}),
-            onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-            decoration: const InputDecoration(
-              hintText: 'e.g., Logo Design in Figma',
+  // ─── Header ────────────────────────────────────────────────────────────────
+
+  Widget _buildHeader() {
+    return Row(
+      children: [
+        // Decorative icon
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF6D5BF7), Color(0xFF9F67FF)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            validator: (v) =>
-                (v == null || v.trim().isEmpty) ? 'Please enter a title' : null,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Make it clear and specific',
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            'Description *',
-            style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _descriptionController,
-            minLines: 5,
-            maxLines: 7,
-            textInputAction: TextInputAction.newline,
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText:
-                  "Describe what you'll teach, your experience, and what students will learn...",
-            ),
-            validator: (v) => (v == null || v.trim().isEmpty)
-                ? 'Please enter a description'
-                : null,
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            "Be detailed about what you'll cover",
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Category *',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownField<String>(
-                      value: _category,
-                      hint: 'Select category',
-                      items: _categories,
-                      onChanged: (v) => setState(() => _category = v),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Difficulty Level *',
-                      style: TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                    const SizedBox(height: 8),
-                    DropdownField<String>(
-                      value: _difficulty,
-                      hint: 'Select level',
-                      items: _levels,
-                      onChanged: (v) => setState(() => _difficulty = v),
-                    ),
-                  ],
-                ),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: [
+              BoxShadow(
+                color: _accent.withValues(alpha: 0.3),
+                blurRadius: 16,
+                offset: const Offset(0, 4),
               ),
             ],
+          ),
+          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _isEditing ? 'Edit Your Skill' : 'Create a Skill Listing',
+                style: const TextStyle(
+                  color: _textPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.5,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Share what you know, learn what you need',
+                style: TextStyle(color: _textSecondary, fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        // Completion ring
+        _CompletionRing(percent: _completionPercent, pulse: _pulse),
+      ],
+    );
+  }
+
+  // ─── Step Indicator ────────────────────────────────────────────────────────
+
+  Widget _buildStepIndicator() {
+    const labels = ['Essentials', 'Details', 'Review & Post'];
+    return Row(
+      children: [
+        for (int i = 0; i < 3; i++) ...[
+          if (i > 0)
+            Expanded(
+              child: Container(
+                height: 2,
+                margin: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(1),
+                  color: i <= _step ? _accent : _border,
+                ),
+              ),
+            ),
+          GestureDetector(
+            onTap: () {
+              if (i == 0 || (i == 1 && _step0Valid) || (i == 2 && _canPublish)) {
+                setState(() => _step = i);
+              }
+            },
+            child: MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: i == _step ? _accentSoft : _surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: i == _step
+                        ? _accent.withValues(alpha: 0.6)
+                        : i < _step
+                            ? _teal.withValues(alpha: 0.3)
+                            : _border,
+                    width: i == _step ? 1.5 : 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: 24,
+                      height: 24,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: i < _step
+                            ? _teal
+                            : i == _step
+                                ? _accent
+                                : _card,
+                        border: Border.all(
+                          color: i <= _step ? Colors.transparent : _border,
+                        ),
+                      ),
+                      child: Center(
+                        child: i < _step
+                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
+                            : Text(
+                                '${i + 1}',
+                                style: TextStyle(
+                                  color: i == _step ? Colors.white : _textDim,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      labels[i],
+                      style: TextStyle(
+                        color: i <= _step ? _textPrimary : _textDim,
+                        fontSize: 13,
+                        fontWeight: i == _step ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
-      ),
+      ],
     );
   }
 
-  // ------------------ Details card content ------------------
-  Widget _buildDetailsCardContent() {
+  // ─── Step Content ──────────────────────────────────────────────────────────
+
+  Widget _buildCurrentStep() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      child: switch (_step) {
+        0 => _buildStep0(),
+        1 => _buildStep1(),
+        _ => _buildStep2(),
+      },
+    );
+  }
+
+  // ── Step 0: Essentials ─────────────────────────────────────────────────────
+
+  Widget _buildStep0() {
     return Column(
+      key: const ValueKey('step0'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Estimated Hours',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  TextFormField(
-                    controller: _hoursController,
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.next,
-                    onFieldSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                    decoration: const InputDecoration(hintText: '1'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Delivery Format',
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  DropdownField<String>(
-                    value: _delivery,
-                    hint: 'Remote Only',
-                    items: _deliveryOptions,
-                    onChanged: (v) =>
-                        setState(() => _delivery = v ?? _delivery),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        const Text('Tags', style: TextStyle(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _tagController,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _addTag(),
-                decoration: const InputDecoration(hintText: 'Add a tag...'),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _addTag,
-              icon: const Icon(Icons.add, color: Colors.white),
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.all(accentPurple),
-                padding: WidgetStateProperty.all(const EdgeInsets.all(12)),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+        _SectionShell(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _label('Skill Title', required: true),
+                const SizedBox(height: 8),
+                _textField(
+                  controller: _titleCtrl,
+                  hint: 'e.g., Logo Design in Figma',
+                  maxLength: 200,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 24),
+                _label('Description', required: true),
+                const SizedBox(height: 8),
+                _textField(
+                  controller: _descCtrl,
+                  hint:
+                      "What will you teach? What's your experience? What will students walk away with?",
+                  minLines: 5,
+                  maxLines: 8,
+                  maxLength: 2000,
+                  onChanged: (_) => setState(() {}),
+                ),
+                const SizedBox(height: 4),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    '${_descCtrl.text.length} / 2000',
+                    style: TextStyle(
+                      color: _descCtrl.text.length > 1800
+                          ? _rose
+                          : _textDim,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8,
-          children: _tags
-              .map(
-                (t) => Chip(
-                  label: Text(t),
-                  onDeleted: () => setState(() => _tags.remove(t)),
-                  backgroundColor: Colors.white10,
-                ),
-              )
-              .toList(),
+        const SizedBox(height: 20),
+        _SectionShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label('Category', required: true),
+              const SizedBox(height: 12),
+              _buildCategoryGrid(),
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
-        const Text(
-          "What You'll Deliver",
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: TextField(
-                controller: _deliverableController,
-                onSubmitted: (_) => _addDeliverable(),
-                decoration: const InputDecoration(
-                  hintText: 'e.g., 3 logo concepts with revisions...',
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
-              onPressed: _addDeliverable,
-              icon: const Icon(Icons.add, color: Colors.white),
-              style: ButtonStyle(
-                backgroundColor: WidgetStateProperty.all(accentPurple),
-                padding: WidgetStateProperty.all(const EdgeInsets.all(12)),
-                shape: WidgetStateProperty.all(
-                  RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: _deliverables
-              .map(
-                (d) => Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: cardColor.withValues(alpha: .8),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(child: Text(d)),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () =>
-                            setState(() => _deliverables.remove(d)),
-                      ),
-                    ],
-                  ),
-                ),
-              )
-              .toList(),
+        const SizedBox(height: 20),
+        _buildNavButtons(
+          onNext: _step0Valid
+              ? () => setState(() => _step = 1)
+              : null,
         ),
       ],
     );
   }
-}
 
-// ------------------ Model used to print request ------------------
-class PostSkillRequest {
-  final String title;
-  final String description;
-  final String category;
-  final String difficulty;
-  final int estimatedHours;
-  final String deliveryFormat;
-  final List<String> tags;
-  final List<String> deliverables;
-
-  PostSkillRequest({
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.difficulty,
-    required this.estimatedHours,
-    required this.deliveryFormat,
-    required this.tags,
-    required this.deliverables,
-  });
-
-  Map<String, dynamic> toJson() => {
-    'title': title,
-    'description': description,
-    'category': category,
-    'difficulty': difficulty,
-    'estimatedHours': estimatedHours,
-    'deliveryFormat': deliveryFormat,
-    'tags': tags,
-    'deliverables': deliverables,
-  };
-}
-
-// ------------------ Top bar (NO notifications here) ------------------
-class _TopBarNoNotifications extends StatelessWidget {
-  const _TopBarNoNotifications();
-
-  @override
-  Widget build(BuildContext context) {
-    // Keeping structure simple; no bell/badge.
-    return const SizedBox(
-      height: 44,
-      child: Row(children: [Expanded(child: SizedBox())]),
-    );
-  }
-}
-
-// ------------------ Reusable DropdownField ------------------
-class DropdownField<T> extends StatelessWidget {
-  const DropdownField({
-    super.key,
-    required this.value,
-    required this.hint,
-    required this.items,
-    required this.onChanged,
-  });
-
-  final T? value;
-  final String hint;
-  final List<String> items;
-  final ValueChanged<T?> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(12),
-        color: cardColor.withValues(alpha: .65),
-        border: Border.all(color: Colors.white12),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: Row(
-          children: [
-            Expanded(
-              child: DropdownButton<T>(
-                value: value,
-                isExpanded: true,
-                dropdownColor: cardColor,
-                hint: Text(hint, style: const TextStyle(color: Colors.white70)),
-                items: items
-                    .map(
-                      (s) => DropdownMenuItem<T>(value: s as T, child: Text(s)),
-                    )
-                    .toList(),
-                onChanged: onChanged,
-              ),
-            ),
-            const Icon(Icons.keyboard_arrow_down, color: Colors.white70),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ------------------ Sidebar Navigation (aligned with HomePage) ------------------
-class SidebarNav extends StatelessWidget {
-  const SidebarNav({super.key, this.activeLabel, this.badgeRequests});
-
-  final String? activeLabel;
-  final String? badgeRequests;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 240, // match HomePage
-      decoration: const BoxDecoration(
-        color: Color(0xFF0E0E10),
-        border: Border(right: BorderSide(color: Color(0xFF1F2937))),
-      ),
-      child: Column(
-        children: [
-          const SizedBox(height: 12),
-          // Logo (same sizing as HomePage sidebar)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: SizedBox(
-                height: 70,
-                child: Image.asset(
-                  'assets/Swap-removebg-preview.png',
-                  fit: BoxFit.contain,
+  Widget _buildCategoryGrid() {
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: _categories.map((cat) {
+        final selected = _category == cat.$1;
+        return GestureDetector(
+          onTap: () => setState(() => _category = cat.$1),
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? cat.$3.withValues(alpha: 0.12)
+                    : _card,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: selected
+                      ? cat.$3.withValues(alpha: 0.5)
+                      : _border,
+                  width: selected ? 1.5 : 1,
                 ),
               ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(cat.$2, size: 18, color: selected ? cat.$3 : _textDim),
+                  const SizedBox(width: 8),
+                  Text(
+                    cat.$1,
+                    style: TextStyle(
+                      color: selected ? cat.$3 : _textSecondary,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Divider(color: Color(0xFF1F2937), height: 1),
-          const SizedBox(height: 12),
-          _navItem(
-            context,
-            Icons.home_rounded,
-            'Home',
-            active: (activeLabel ?? '') == 'Home',
-            onTap: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const HomePage()),
-                (route) => false,
-              );
-            },
-          ),
+        );
+      }).toList(),
+    );
+  }
 
-          _navItem(
-            context,
-            Icons.explore_outlined,
-            'Discover',
-            active: (activeLabel ?? '') == 'Discover',
-          ),
-          _navItem(
-            context,
-            Icons.add_circle_outline,
-            'Post Skill',
-            active: (activeLabel ?? '') == 'Post Skill',
-            onTap: () {},
-          ),
-          _navItem(
-            context,
-            Icons.inbox_outlined,
-            'Requests',
-            badge: badgeRequests,
-            active: (activeLabel ?? '') == 'Requests',
-          ),
-          _navItem(
-            context,
-            Icons.analytics_outlined,
-            'Dashboard',
-            active: (activeLabel ?? '') == 'Dashboard',
-          ),
-          _navItem(
-            context,
-            Icons.person_outline,
-            'Profile',
-            active: (activeLabel ?? '') == 'Profile',
-          ),
-          const Spacer(),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white10,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF1F2937)),
+  // ── Step 1: Details ────────────────────────────────────────────────────────
+
+  Widget _buildStep1() {
+    return Column(
+      key: const ValueKey('step1'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _SectionShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label('Difficulty Level', required: true),
+              const SizedBox(height: 12),
+              Row(
+                children: _levels.map((level) {
+                  final selected = _difficulty == level;
+                  final color = level == 'Beginner'
+                      ? _teal
+                      : level == 'Intermediate'
+                          ? _amber
+                          : _rose;
+                  return Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.only(
+                        right: level != 'Advanced' ? 10 : 0,
+                      ),
+                      child: GestureDetector(
+                        onTap: () => setState(() => _difficulty = level),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: selected
+                                  ? color.withValues(alpha: 0.1)
+                                  : _card,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: selected
+                                    ? color.withValues(alpha: 0.5)
+                                    : _border,
+                                width: selected ? 1.5 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: List.generate(
+                                    level == 'Beginner'
+                                        ? 1
+                                        : level == 'Intermediate'
+                                            ? 2
+                                            : 3,
+                                    (_) => Container(
+                                      width: 6,
+                                      height: 6,
+                                      margin: const EdgeInsets.symmetric(horizontal: 2),
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: selected ? color : _textDim,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  level,
+                                  style: TextStyle(
+                                    color: selected ? color : _textSecondary,
+                                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
               ),
-              padding: const EdgeInsets.all(16),
-              child: Column(
+              const SizedBox(height: 24),
+              Row(
                 children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('Estimated Hours'),
+                        const SizedBox(height: 8),
+                        _textField(
+                          controller: _hoursCtrl,
+                          hint: '1',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[\d.]'))],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('Delivery Format'),
+                        const SizedBox(height: 8),
+                        _dropdown(
+                          value: _delivery,
+                          items: _deliveryOptions,
+                          onChanged: (v) => setState(() => _delivery = v ?? _delivery),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _SectionShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _label('Tags'),
+              const SizedBox(height: 4),
+              const Text(
+                'Help people discover your skill',
+                style: TextStyle(color: _textDim, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _textField(
+                      controller: _tagCtrl,
+                      hint: 'e.g., figma, branding, ui...',
+                      onSubmitted: (_) => _addTag(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _iconBtn(Icons.add_rounded, onTap: _addTag),
+                ],
+              ),
+              if (_tags.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _tags.map((t) => _tagChip(t)).toList(),
+                ),
+              ],
+              const SizedBox(height: 24),
+              _label('Deliverables'),
+              const SizedBox(height: 4),
+              const Text(
+                'What will the learner walk away with?',
+                style: TextStyle(color: _textDim, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _textField(
+                      controller: _deliverableCtrl,
+                      hint: 'e.g., 3 logo concepts with revisions',
+                      onSubmitted: (_) => _addDeliverable(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  _iconBtn(Icons.add_rounded, onTap: _addDeliverable),
+                ],
+              ),
+              if (_deliverables.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ...List.generate(_deliverables.length, (i) {
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: _card,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: _border),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: _teal.withValues(alpha: 0.15),
+                          ),
+                          child: Center(
+                            child: Icon(Icons.check_rounded, size: 13, color: _teal),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _deliverables[i],
+                            style: const TextStyle(color: _textPrimary, fontSize: 13),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _deliverables.removeAt(i)),
+                          child: const Icon(Icons.close_rounded, size: 16, color: _textDim),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        _buildNavButtons(
+          onBack: () => setState(() => _step = 0),
+          onNext: _step1Valid
+              ? () => setState(() => _step = 2)
+              : null,
+        ),
+      ],
+    );
+  }
+
+  // ── Step 2: Review & Publish ───────────────────────────────────────────────
+
+  Widget _buildStep2() {
+    final catEntry = _categories.firstWhere(
+      (c) => c.$1 == _category,
+      orElse: () => _categories.last,
+    );
+
+    return Column(
+      key: const ValueKey('step2'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Live preview card — the hero moment
+        _SectionShell(
+          gradient: LinearGradient(
+            colors: [
+              catEntry.$3.withValues(alpha: 0.06),
+              _surface,
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.visibility_outlined, size: 18, color: _textDim),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Preview — how others will see your listing',
+                    style: TextStyle(color: _textDim, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Title row
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
                     child: Text(
-                      'Share Your Skills',
-                      style: TextStyle(
-                        color: Colors.white,
+                      _titleCtrl.text.isEmpty ? 'Untitled Skill' : _titleCtrl.text,
+                      style: const TextStyle(
+                        color: _textPrimary,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: catEntry.$3.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: catEntry.$3.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(catEntry.$2, size: 14, color: catEntry.$3),
+                        const SizedBox(width: 4),
+                        Text(
+                          _category ?? 'Category',
+                          style: TextStyle(
+                            color: catEntry.$3,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              // Metadata pills
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _previewPill(Icons.signal_cellular_alt_rounded, _difficulty ?? 'Level'),
+                  _previewPill(Icons.schedule_rounded, '${_hoursCtrl.text}h'),
+                  _previewPill(Icons.language_rounded, _delivery),
+                ],
+              ),
+              const SizedBox(height: 16),
+              // Description
+              Text(
+                _descCtrl.text.isEmpty
+                    ? 'Your description will appear here...'
+                    : _descCtrl.text,
+                style: TextStyle(
+                  color: _descCtrl.text.isEmpty ? _textDim : _textSecondary,
+                  fontSize: 14,
+                  height: 1.6,
+                ),
+                maxLines: 6,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (_tags.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _tags.map((t) {
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: _card,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(color: _border),
+                      ),
+                      child: Text(t, style: const TextStyle(color: _textSecondary, fontSize: 12)),
+                    );
+                  }).toList(),
+                ),
+              ],
+              if (_deliverables.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                const Text(
+                  'DELIVERABLES',
+                  style: TextStyle(
+                    color: _textDim,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...List.generate(_deliverables.length, (i) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(top: 3),
+                          child: Icon(Icons.check_circle_rounded, size: 14, color: _teal),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _deliverables[i],
+                            style: const TextStyle(color: _textPrimary, fontSize: 13, height: 1.4),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ],
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        // Publish bar
+        _SectionShell(
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _canPublish ? 'Ready to go!' : 'Almost there...',
+                      style: const TextStyle(
+                        color: _textPrimary,
+                        fontSize: 16,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Start earning by helping others learn',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    const SizedBox(height: 2),
+                    Text(
+                      _canPublish
+                          ? 'Your skill listing looks great'
+                          : 'Go back and fill in the required fields',
+                      style: const TextStyle(color: _textSecondary, fontSize: 13),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: FilledButton(
-                      onPressed: () {},
-                      style: FilledButton.styleFrom(
-                        backgroundColor: accentPurple,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text('Post a Skill'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItem(
-    BuildContext context,
-    IconData icon,
-    String label, {
-    bool active = false,
-    String? badge,
-    VoidCallback? onTap,
-  }) {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(10, 6, 10, 6),
-      decoration: BoxDecoration(
-        color: active ? const Color(0x201A1333) : Colors.transparent,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
-        leading: Icon(icon, color: active ? accentPurple : Colors.white70),
-        title: Text(
-          label,
-          style: TextStyle(
-            color: active ? Colors.white : Colors.white70,
-            fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-          ),
-        ),
-        trailing: badge == null
-            ? null
-            : Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF164E63),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  badge,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    height: 1,
-                  ),
+                  ],
                 ),
               ),
-        onTap: onTap,
-      ),
-    );
-  }
-}
-
-class TopBarNoNotifications extends StatelessWidget {
-  const TopBarNoNotifications({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    // Keeping structure simple; no bell/badge.
-    return SizedBox(
-      height: 44,
-      child: Row(
-        children: const [
-          // Left spacer so content below aligns nicely
-          Expanded(child: SizedBox()),
-        ],
-      ),
-    );
-  }
-}
-
-// ------------------ Generic section card widget ------------------
-class SectionCard extends StatelessWidget {
-  const SectionCard({
-    super.key,
-    required this.title,
-    required this.child,
-    this.leading,
-  });
-
-  final String title;
-  final Widget child;
-  final Widget? leading;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: cardColor,
-      elevation: 6,
-      shadowColor: Colors.black54,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                if (leading != null) leading!,
-                const SizedBox(width: 10),
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+              const SizedBox(width: 16),
+              SizedBox(
+                height: 46,
+                child: FilledButton.icon(
+                  onPressed: _canPublish && !_publishing ? _publish : null,
+                  icon: _publishing
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.rocket_launch_rounded, size: 18),
+                  label: Text(
+                    _isEditing ? 'Save Changes' : 'Publish Skill',
+                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ------------------ Pro Tips Panel ------------------
-class ProTipsPanel extends StatelessWidget {
-  const ProTipsPanel({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF231C35),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.lightbulb, color: accentPurple),
-              SizedBox(width: 8),
-              Text(
-                'Pro Tips',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: _canPublish ? _accent : _card,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: _card,
+                    disabledForegroundColor: _textDim,
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _bullet('Be specific about what you\'ll teach'),
-          _bullet('Include examples of your work'),
-          _bullet('Set realistic time estimates'),
-          _bullet('Use relevant tags for discovery'),
-          _bullet('Respond quickly to build trust'),
+        ),
+        const SizedBox(height: 20),
+        _buildNavButtons(
+          onBack: () => setState(() => _step = 1),
+          showNext: false,
+        ),
+      ],
+    );
+  }
+
+  // ─── Side Panel ────────────────────────────────────────────────────────────
+
+  Widget _buildSidePanel() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Completion card
+        _SectionShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Text(
+                    'Completion',
+                    style: TextStyle(
+                      color: _textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '$_completionPercent%',
+                    style: TextStyle(
+                      color: _completionPercent >= 80
+                          ? _teal
+                          : _completionPercent >= 50
+                              ? _amber
+                              : _textDim,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: _completionPercent / 100,
+                  minHeight: 6,
+                  backgroundColor: _card,
+                  valueColor: AlwaysStoppedAnimation(
+                    _completionPercent >= 80
+                        ? _teal
+                        : _completionPercent >= 50
+                            ? _amber
+                            : _accent,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              _checkItem('Title added', _titleCtrl.text.trim().isNotEmpty),
+              _checkItem('Description (20+ chars)', _descCtrl.text.trim().length > 20),
+              _checkItem('Category selected', _category != null),
+              _checkItem('Difficulty set', _difficulty != null),
+              _checkItem('Tags added', _tags.isNotEmpty),
+              _checkItem('Deliverables listed', _deliverables.isNotEmpty),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Tips
+        _SectionShell(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 28,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: _amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.lightbulb_outline_rounded, size: 16, color: _amber),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Tips for Success',
+                    style: TextStyle(
+                      color: _textPrimary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _tipItem('Be specific about outcomes — "you\'ll build a portfolio site" beats "learn web dev"'),
+              _tipItem('Mention your experience level so people know what to expect'),
+              _tipItem('Realistic hour estimates build trust'),
+              _tipItem('Tags are how people find you — use 3-5 relevant ones'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ─── Nav Buttons ───────────────────────────────────────────────────────────
+
+  Widget _buildNavButtons({
+    VoidCallback? onBack,
+    VoidCallback? onNext,
+    bool showNext = true,
+  }) {
+    return Row(
+      children: [
+        if (onBack != null)
+          OutlinedButton.icon(
+            onPressed: onBack,
+            icon: const Icon(Icons.arrow_back_rounded, size: 16),
+            label: const Text('Back'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: _textSecondary,
+              side: const BorderSide(color: _border),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+        const Spacer(),
+        if (showNext)
+          FilledButton.icon(
+            onPressed: onNext,
+            icon: const Text(''),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text('Continue', style: TextStyle(fontWeight: FontWeight.w700)),
+                SizedBox(width: 4),
+                Icon(Icons.arrow_forward_rounded, size: 16),
+              ],
+            ),
+            style: FilledButton.styleFrom(
+              backgroundColor: onNext != null ? _accent : _card,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: _card,
+              disabledForegroundColor: _textDim,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ─── Shared Micro-Widgets ──────────────────────────────────────────────────
+
+  Widget _label(String text, {bool required = false}) {
+    return Row(
+      children: [
+        Text(
+          text,
+          style: const TextStyle(
+            color: _textPrimary,
+            fontWeight: FontWeight.w600,
+            fontSize: 14,
+          ),
+        ),
+        if (required)
+          const Text(' *', style: TextStyle(color: _rose, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+
+  Widget _textField({
+    required TextEditingController controller,
+    String? hint,
+    int minLines = 1,
+    int maxLines = 1,
+    int? maxLength,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    ValueChanged<String>? onChanged,
+    ValueChanged<String>? onSubmitted,
+  }) {
+    return TextField(
+      controller: controller,
+      minLines: minLines,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      style: const TextStyle(color: _textPrimary, fontSize: 14),
+      cursorColor: _accent,
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: _textDim, fontSize: 14),
+        counterText: '',
+        filled: true,
+        fillColor: _card,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: _borderFocus, width: 1.5),
+        ),
+      ),
+    );
+  }
+
+  Widget _dropdown({
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _border),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          dropdownColor: _card,
+          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: _textDim),
+          style: const TextStyle(color: _textPrimary, fontSize: 14),
+          items: items
+              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+              .toList(),
+          onChanged: onChanged,
+        ),
+      ),
+    );
+  }
+
+  Widget _iconBtn(IconData icon, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: _accent,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
+    );
+  }
+
+  Widget _tagChip(String tag) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _accent.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: _accent.withValues(alpha: 0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            tag,
+            style: const TextStyle(color: _accentGlow, fontSize: 12, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () => setState(() => _tags.remove(tag)),
+            child: Icon(Icons.close_rounded, size: 14, color: _accentGlow.withValues(alpha: 0.6)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _bullet(String text) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 6),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('• ', style: TextStyle(fontSize: 16, color: Colors.white70)),
-        Expanded(
-          child: Text(text, style: const TextStyle(color: Colors.white70)),
-        ),
-      ],
-    ),
-  );
+  Widget _previewPill(IconData icon, String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: _card,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _border),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: _textDim),
+          const SizedBox(width: 5),
+          Text(text, style: const TextStyle(color: _textSecondary, fontSize: 12)),
+        ],
+      ),
+    );
+  }
+
+  Widget _checkItem(String text, bool done) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
+            size: 16,
+            color: done ? _teal : _textDim,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: done ? _textPrimary : _textDim,
+              fontSize: 13,
+              decoration: done ? TextDecoration.lineThrough : null,
+              decorationColor: _textDim,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _tipItem(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(top: 4),
+            child: Icon(Icons.arrow_right_rounded, size: 16, color: _amber),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(color: _textSecondary, fontSize: 13, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ------------------ Preview Card ------------------
-class PreviewCard extends StatelessWidget {
-  const PreviewCard({
-    super.key,
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.hours,
-    required this.mode,
-  });
+// ─── Section Shell ────────────────────────────────────────────────────────────
 
-  final String title;
-  final String description;
-  final String category;
-  final String hours;
-  final String mode;
+class _SectionShell extends StatelessWidget {
+  const _SectionShell({required this.child, this.gradient});
+  final Widget child;
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: cardColor.withValues(alpha: .9),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.white12,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                category,
-                style: const TextStyle(color: Colors.white70, fontSize: 12),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              title.isEmpty ? 'Your skill title' : title,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              description.isEmpty
-                  ? 'Your description will appear here'
-                  : description,
-              style: const TextStyle(color: Colors.white70),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 14, color: Colors.white70),
-                const SizedBox(width: 6),
-                Text(
-                  '${hours}h',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-                const SizedBox(width: 12),
-                const Icon(Icons.public, size: 14, color: Colors.white70),
-                const SizedBox(width: 6),
-                Text(
-                  mode,
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
-                ),
-              ],
-            ),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.all(22),
+      decoration: BoxDecoration(
+        gradient: gradient,
+        color: gradient == null ? _surface : null,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _border),
       ),
+      child: child,
+    );
+  }
+}
+
+// ─── Animated Completion Ring ─────────────────────────────────────────────────
+
+class _CompletionRing extends StatelessWidget {
+  const _CompletionRing({required this.percent, required this.pulse});
+  final int percent;
+  final Animation<double> pulse;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pulse,
+      builder: (context, child) {
+        return SizedBox(
+          width: 56,
+          height: 56,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 56,
+                height: 56,
+                child: CircularProgressIndicator(
+                  value: percent / 100,
+                  strokeWidth: 4,
+                  backgroundColor: _border,
+                  valueColor: AlwaysStoppedAnimation(
+                    percent >= 80
+                        ? _teal
+                        : percent >= 50
+                            ? _amber
+                            : _accent,
+                  ),
+                ),
+              ),
+              Text(
+                '$percent',
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

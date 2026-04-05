@@ -68,6 +68,8 @@ def create_skill(
             "poster_name": profile.get("display_name") or profile.get("full_name", ""),
             "poster_city": profile.get("city", ""),
             "poster_swap_credits": profile.get("swap_credits", 0),
+            "poster_average_rating": profile.get("average_rating", 0),
+            "poster_review_count": profile.get("review_count", 0),
         },
     )
 
@@ -121,6 +123,8 @@ def update_skill(
             "poster_name": profile.get("display_name") or profile.get("full_name", ""),
             "poster_city": profile.get("city", ""),
             "poster_swap_credits": profile.get("swap_credits", 0),
+            "poster_average_rating": profile.get("average_rating", 0),
+            "poster_review_count": profile.get("review_count", 0),
         },
     )
 

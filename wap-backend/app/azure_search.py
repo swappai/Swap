@@ -1,6 +1,9 @@
 """Azure AI Search client for vector operations."""
 
+import logging
 from typing import List, Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 from azure.core.credentials import AzureKeyCredential
 from azure.search.documents import SearchClient
 from azure.search.documents.indexes import SearchIndexClient
@@ -65,6 +68,8 @@ class AzureSearchService:
             SimpleField(name="show_city", type=SearchFieldDataType.Boolean, filterable=True),
             SimpleField(name="swap_credits", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             SimpleField(name="swaps_completed", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
+            SimpleField(name="average_rating", type=SearchFieldDataType.Double, filterable=True, sortable=True),
+            SimpleField(name="review_count", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             # Vector fields
             SearchField(
                 name="offer_vec",
@@ -135,6 +140,8 @@ class AzureSearchService:
             "show_city": payload.get("show_city", True),
             "swap_credits": payload.get("swap_credits", 0) or 0,
             "swaps_completed": payload.get("swaps_completed", 0) or 0,
+            "average_rating": float(payload.get("average_rating", 0) or 0),
+            "review_count": int(payload.get("review_count", 0) or 0),
             "offer_vec": offer_vec,
             "need_vec": need_vec,
         }
@@ -193,6 +200,8 @@ class AzureSearchService:
                     "show_city": result.get("show_city"),
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
+                    "average_rating": result.get("average_rating", 0),
+                    "review_count": result.get("review_count", 0),
                 })
 
         return matches
@@ -247,6 +256,8 @@ class AzureSearchService:
                     "show_city": result.get("show_city"),
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
+                    "average_rating": result.get("average_rating", 0),
+                    "review_count": result.get("review_count", 0),
                 })
 
         return matches
@@ -284,14 +295,17 @@ class SkillsSearchService:
             SimpleField(name="difficulty", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="estimated_hours", type=SearchFieldDataType.Double),
             SimpleField(name="delivery", type=SearchFieldDataType.String, filterable=True),
-            SearchableField(
+            SearchField(
                 name="tags",
-                type=SearchFieldDataType.Collection(SearchFieldDataType.String),
+                type="Collection(Edm.String)",
+                searchable=True,
                 filterable=True,
             ),
             SimpleField(name="poster_name", type=SearchFieldDataType.String),
             SimpleField(name="poster_city", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="poster_swap_credits", type=SearchFieldDataType.Int32, sortable=True),
+            SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
+            SimpleField(name="poster_review_count", type=SearchFieldDataType.Int32, sortable=True),
             SearchField(
                 name="skill_vec",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
@@ -337,6 +351,8 @@ class SkillsSearchService:
             "poster_name": payload.get("poster_name", ""),
             "poster_city": payload.get("poster_city", ""),
             "poster_swap_credits": payload.get("poster_swap_credits", 0) or 0,
+            "poster_average_rating": float(payload.get("poster_average_rating", 0) or 0),
+            "poster_review_count": int(payload.get("poster_review_count", 0) or 0),
             "skill_vec": skill_vec,
         }
         self.search_client.merge_or_upload_documents([document])
@@ -388,6 +404,8 @@ class SkillsSearchService:
                     "poster_name": result.get("poster_name", ""),
                     "poster_city": result.get("poster_city", ""),
                     "poster_swap_credits": result.get("poster_swap_credits", 0),
+                    "poster_average_rating": result.get("poster_average_rating", 0),
+                    "poster_review_count": result.get("poster_review_count", 0),
                     "score": score,
                 })
 

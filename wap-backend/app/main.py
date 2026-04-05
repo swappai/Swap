@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routers import profiles, search, swaps, swap_requests, messages, moderation, points, skills
+from app.routers import profiles, search, swaps, swap_requests, messages, moderation, points, skills, reviews
 
 logger = logging.getLogger(__name__)
 
@@ -90,9 +90,9 @@ app.include_router(search.router)
 app.include_router(swaps.router)
 app.include_router(swap_requests.router)
 app.include_router(points.router)
-# TODO: swap_completion, reviews, portfolio routers still reference firebase_db — migrate to cosmos_db
+# TODO: swap_completion, portfolio routers still reference firebase_db — migrate to cosmos_db
 # app.include_router(swap_completion.router)
-# app.include_router(reviews.router)
+app.include_router(reviews.router)
 # app.include_router(portfolio.router)
 app.include_router(messages.router)
 app.include_router(moderation.router)

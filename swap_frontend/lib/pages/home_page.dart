@@ -6,6 +6,7 @@ import '../services/skill_service.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/swap_request_service.dart';
 import '../widgets/app_sidebar.dart';
+import '../widgets/star_rating.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -552,10 +553,16 @@ class _SkillCard extends StatelessWidget {
                             fontSize: 12,
                           ),
                         ),
-                        if (result.posterCity.isNotEmpty)
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            StarRating(
+                              rating: result.posterAverageRating,
+                              count: result.posterReviewCount,
+                              compact: true,
+                            ),
+                            if (result.posterCity.isNotEmpty) ...[
+                              const SizedBox(width: 8),
                               const Icon(Icons.location_on_outlined,
                                   size: 12, color: HomePage.textMuted),
                               const SizedBox(width: 2),
@@ -566,22 +573,9 @@ class _SkillCard extends StatelessWidget {
                                   fontSize: 11,
                                 ),
                               ),
-                              if (result.posterSwapCredits > 0) ...[
-                                const SizedBox(width: 8),
-                                Icon(Icons.verified_outlined,
-                                    size: 12, color: HomePage.success),
-                                const SizedBox(width: 2),
-                                Text(
-                                  '${result.posterSwapCredits}',
-                                  style: TextStyle(
-                                    color: HomePage.success,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
                             ],
-                          ),
+                          ],
+                        ),
                       ],
                     ),
                   ),

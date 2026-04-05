@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../services/b2c_auth_service.dart';
 import '../services/profile_service.dart';
+import '../services/review_service.dart';
 import '../services/skill_service.dart';
 import '../widgets/app_sidebar.dart';
+import '../widgets/star_rating.dart';
+import '../widgets/review_dialog.dart';
 import 'home_page.dart';
 import 'post_skill_page.dart';
 import 'onboarding.dart';
@@ -58,6 +61,8 @@ class ProfilePage extends StatelessWidget {
                   final servicesNeeded = (data['services_needed'] ?? '').toString();
                   final swapCredits = (data['swap_credits'] as num?)?.toInt() ?? 0;
                   final swapsCompleted = (data['swaps_completed'] as num?)?.toInt() ?? 0;
+                  final averageRating = (data['average_rating'] as num?)?.toDouble() ?? 0.0;
+                  final reviewCount = (data['review_count'] as num?)?.toInt() ?? 0;
                   final joinedAt = DateTime.tryParse(data['created_at'] ?? '');
 
                   return SingleChildScrollView(
@@ -95,6 +100,8 @@ class ProfilePage extends StatelessWidget {
                                   : 'Joined ${_formatMonthYear(joinedAt)}',
                               swapCredits: swapCredits,
                               swapsCompleted: swapsCompleted,
+                              averageRating: averageRating,
+                              reviewCount: reviewCount,
                               verified: false,
                               topRated: false,
                               isOwnProfile: isOwnProfile,
@@ -129,7 +136,7 @@ class ProfilePage extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              reviewsBuilder: () => const _ReviewsPlaceholder(),
+                              reviewsBuilder: () => _ReviewsSection(uid: targetUid),
                               activityBuilder: () => const _ActivityPlaceholder(),
                             ),
                             if (bio.isNotEmpty) ...[
@@ -165,6 +172,8 @@ class _HeaderBanner extends StatelessWidget {
     required this.topRated,
     this.swapCredits = 0,
     this.swapsCompleted = 0,
+    this.averageRating = 0.0,
+    this.reviewCount = 0,
     this.isOwnProfile = true,
     this.onEdit,
     this.onSettings,
@@ -180,6 +189,8 @@ class _HeaderBanner extends StatelessWidget {
   final bool topRated;
   final int swapCredits;
   final int swapsCompleted;
+  final double averageRating;
+  final int reviewCount;
   final bool isOwnProfile;
   final VoidCallback? onEdit;
   final VoidCallback? onSettings;
@@ -232,6 +243,10 @@ class _HeaderBanner extends StatelessWidget {
                                     fontSize: 26,
                                     fontWeight: FontWeight.w800,
                                   ),
+                                ),
+                                StarRating(
+                                  rating: averageRating,
+                                  count: reviewCount,
                                 ),
                                 if (verified)
                                   _pill(
@@ -997,16 +1012,180 @@ class _EmptySkills extends StatelessWidget {
   }
 }
 
-class _ReviewsPlaceholder extends StatelessWidget {
-  const _ReviewsPlaceholder();
+class _ReviewsSection extends StatefulWidget {
+  const _ReviewsSection({required this.uid});
+  final String uid;
+
+  @override
+  State<_ReviewsSection> createState() => _ReviewsSectionState();
+}
+
+class _ReviewsSectionState extends State<_ReviewsSection> {
+  List<ReviewModel>? _reviews;
+  double _avgRating = 0.0;
+  int _total = 0;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    try {
+      final result = await ReviewService().getUserReviews(widget.uid);
+      if (mounted) {
+        setState(() {
+          _reviews = result.reviews;
+          _avgRating = result.averageRating;
+          _total = result.total;
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading reviews: $e');
+      if (mounted) setState(() => _loading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return _SectionCard(
-      title: 'Reviews',
-      child: const Text(
-        'No reviews yet.',
-        style: TextStyle(color: HomePage.textMuted),
+    if (_loading) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    final reviews = _reviews ?? [];
+    if (reviews.isEmpty) {
+      return _SectionCard(
+        title: 'Reviews',
+        child: const Text(
+          'No reviews yet.',
+          style: TextStyle(color: HomePage.textMuted),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Summary
+        Card(
+          color: HomePage.surface,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: HomePage.line),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(
+              children: [
+                StarRating(rating: _avgRating, count: _total),
+                const Spacer(),
+                Text(
+                  '$_total review${_total == 1 ? '' : 's'}',
+                  style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 10),
+        // Individual reviews
+        for (final review in reviews) ...[
+          _ReviewCard(review: review),
+          const SizedBox(height: 8),
+        ],
+      ],
+    );
+  }
+}
+
+class _ReviewCard extends StatelessWidget {
+  const _ReviewCard({required this.review});
+  final ReviewModel review;
+
+  @override
+  Widget build(BuildContext context) {
+    final date = DateTime.tryParse(review.createdAt);
+    final dateStr = date != null
+        ? '${date.day}/${date.month}/${date.year}'
+        : '';
+
+    return Card(
+      color: HomePage.surface,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: HomePage.line),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: HomePage.surfaceAlt,
+                  foregroundImage: review.reviewerPhoto != null && review.reviewerPhoto!.isNotEmpty
+                      ? NetworkImage(review.reviewerPhoto!)
+                      : null,
+                  child: Text(
+                    (review.reviewerName ?? 'U').characters.first.toUpperCase(),
+                    style: const TextStyle(color: HomePage.textPrimary, fontSize: 13),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        review.reviewerName ?? 'Anonymous',
+                        style: const TextStyle(
+                          color: HomePage.textPrimary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          StarRating(rating: review.rating.toDouble(), compact: true),
+                          if (dateStr.isNotEmpty) ...[
+                            const SizedBox(width: 8),
+                            Text(dateStr, style: const TextStyle(color: HomePage.textMuted, fontSize: 11)),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (review.skillExchanged != null && review.skillExchanged!.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Skill: ${review.skillExchanged}',
+                style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
+              ),
+            ],
+            if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Text(
+                review.reviewText!,
+                style: const TextStyle(color: HomePage.textPrimary, fontSize: 13, height: 1.4),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

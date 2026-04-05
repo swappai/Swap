@@ -31,6 +31,7 @@ class CosmosService:
         "reports": "/uid",
         "points_transactions": "/uid",
         "skills": "/posted_by",
+        "reviews": "/reviewed_uid",
     }
 
     def __init__(self) -> None:
@@ -511,9 +512,85 @@ class CosmosService:
         )
         return [_clean(i) for i in items]
 
+    def update_skill(self, skill_id: str, posted_by: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Partially update an existing skill document."""
+        try:
+            doc = self._container("skills").read_item(item=skill_id, partition_key=posted_by)
+        except cosmos_exc.CosmosResourceNotFoundError:
+            return None
+        doc.update(data)
+        doc["updated_at"] = _utcnow_iso()
+        self._container("skills").replace_item(item=skill_id, body=doc)
+        return _clean(doc)
+
     def delete_skill(self, skill_id: str, posted_by: str) -> None:
         """Delete a skill document."""
         self._container("skills").delete_item(item=skill_id, partition_key=posted_by)
+
+    # ── Reviews ──────────────────────────────────────────────────────────────
+
+    def create_review(self, reviewed_uid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Create a review document. Uses reviewed_uid as partition key."""
+        review_id = str(uuid.uuid4())
+        now = _utcnow_iso()
+        doc = {
+            "id": review_id,
+            "reviewed_uid": reviewed_uid,
+            "created_at": now,
+            **data,
+        }
+        self._container("reviews").create_item(body=doc)
+        return _clean(doc)
+
+    def get_reviews_for_user(self, reviewed_uid: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all reviews received by a user (within partition — efficient)."""
+        query = f"SELECT * FROM c WHERE c.reviewed_uid = @uid ORDER BY c.created_at DESC OFFSET 0 LIMIT {limit}"
+        params = [{"name": "@uid", "value": reviewed_uid}]
+        items = list(
+            self._container("reviews").query_items(
+                query=query, parameters=params, partition_key=reviewed_uid
+            )
+        )
+        return [_clean(i) for i in items]
+
+    def get_reviews_by_reviewer(self, reviewer_uid: str, limit: int = 50) -> List[Dict[str, Any]]:
+        """Get all reviews written by a user (cross-partition)."""
+        query = f"SELECT * FROM c WHERE c.reviewer_uid = @uid ORDER BY c.created_at DESC OFFSET 0 LIMIT {limit}"
+        params = [{"name": "@uid", "value": reviewer_uid}]
+        items = list(
+            self._container("reviews").query_items(
+                query=query, parameters=params, enable_cross_partition_query=True
+            )
+        )
+        return [_clean(i) for i in items]
+
+    def get_reviews_for_swap(self, swap_request_id: str) -> List[Dict[str, Any]]:
+        """Get all reviews for a specific swap request (cross-partition)."""
+        query = "SELECT * FROM c WHERE c.swap_request_id = @sid"
+        params = [{"name": "@sid", "value": swap_request_id}]
+        items = list(
+            self._container("reviews").query_items(
+                query=query, parameters=params, enable_cross_partition_query=True
+            )
+        )
+        return [_clean(i) for i in items]
+
+    def check_review_exists(self, swap_request_id: str, reviewer_uid: str) -> bool:
+        """Return True if reviewer already submitted a review for this swap."""
+        query = (
+            "SELECT c.id FROM c WHERE c.swap_request_id = @sid"
+            " AND c.reviewer_uid = @uid"
+        )
+        params = [
+            {"name": "@sid", "value": swap_request_id},
+            {"name": "@uid", "value": reviewer_uid},
+        ]
+        items = list(
+            self._container("reviews").query_items(
+                query=query, parameters=params, enable_cross_partition_query=True
+            )
+        )
+        return len(items) > 0
 
     # ── Generic helpers (used by migration script) ────────────────────────────
 
