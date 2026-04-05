@@ -9,10 +9,10 @@ import '../services/skill_service.dart';
 import '../services/swap_request_service.dart';
 import '../services/messaging_service.dart';
 import '../models/swap_request.dart';
-import '../models/conversation.dart';
+
 import '../widgets/app_sidebar.dart';
 import '../widgets/star_rating.dart';
-import '../widgets/review_dialog.dart';
+
 import 'home_page.dart';
 import 'post_skill_page.dart';
 import 'onboarding.dart';
@@ -24,7 +24,6 @@ class ProfilePage extends StatefulWidget {
   /// If null, shows the current user's profile. If set, shows another user's profile.
   final String? uid;
 
-  static const double _gutter = 12;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -88,20 +87,21 @@ class _ProfilePageState extends State<ProfilePage> {
                   final city = (data['city'] ?? '').toString().trim();
                   final bio = (data['bio'] ?? '').toString().trim();
                   final photoUrl = data['photo_url'] as String?;
-                  final timezone = (data['timezone'] ?? '').toString().trim();
+
                   final skillsToOffer = (data['skills_to_offer'] ?? '').toString();
                   final servicesNeeded = (data['services_needed'] ?? '').toString();
                   final swapCredits = (data['swap_credits'] as num?)?.toInt() ?? 0;
                   final swapsCompleted = (data['swaps_completed'] as num?)?.toInt() ?? 0;
                   final averageRating = (data['average_rating'] as num?)?.toDouble() ?? 0.0;
                   final reviewCount = (data['review_count'] as num?)?.toInt() ?? 0;
+                  final accountType = (data['account_type'] ?? '').toString().trim();
                   final joinedAt = DateTime.tryParse(data['created_at'] ?? '');
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
+                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
                     child: Center(
                       child: ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 1000),
+                        constraints: const BoxConstraints(maxWidth: 960),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -113,7 +113,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   alignment: Alignment.centerLeft,
                                   child: TextButton.icon(
                                     onPressed: () => Navigator.of(context).pop(),
-                                    icon: const Icon(Icons.arrow_back, size: 18),
+                                    icon: const Icon(HugeIcons.strokeRoundedArrowLeft01, size: 18),
                                     label: const Text('Back'),
                                     style: TextButton.styleFrom(
                                       foregroundColor: HomePage.textMuted,
@@ -121,27 +121,22 @@ class _ProfilePageState extends State<ProfilePage> {
                                   ),
                                 ),
                               ),
-                            _HeaderBanner(
+
+                            // ===== HERO SECTION =====
+                            _HeroSection(
                               name: name.isEmpty ? (isOwnProfile ? 'Your Name' : 'User') : name,
                               username: username,
                               city: city,
-                              timezone: timezone,
+                              bio: bio,
                               photoUrl: photoUrl,
-                              joinedLabel: joinedAt == null
-                                  ? 'Joined recently'
-                                  : 'Joined ${_formatMonthYear(joinedAt)}',
-                              swapCredits: swapCredits,
-                              swapsCompleted: swapsCompleted,
+                              accountType: accountType,
                               averageRating: averageRating,
                               reviewCount: reviewCount,
-                              verified: false,
-                              topRated: false,
+                              joinedAt: joinedAt,
                               isOwnProfile: isOwnProfile,
                               onEdit: isOwnProfile
                                   ? () => Navigator.of(context).push(
-                                      MaterialPageRoute(
-                                        builder: (_) => const ProfileSetupFlow(),
-                                      ),
+                                      MaterialPageRoute(builder: (_) => const ProfileSetupFlow()),
                                     )
                                   : null,
                               onSettings: isOwnProfile
@@ -154,46 +149,60 @@ class _ProfilePageState extends State<ProfilePage> {
                               onEditPhoto: isOwnProfile
                                   ? () => _pickAndUploadPhoto(targetUid)
                                   : null,
+                              onMessage: !isOwnProfile
+                                  ? () {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Send a swap request to start a conversation')),
+                                      );
+                                    }
+                                  : null,
                             ),
-                            if (bio.isNotEmpty) ...[
-                              const SizedBox(height: 12),
-                              Card(
-                                color: HomePage.surface,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(color: HomePage.line),
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(14),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+
+                            const SizedBox(height: 16),
+
+                            // ===== STATS ROW =====
+                            LayoutBuilder(
+                              builder: (context, constraints) {
+                                final narrow = constraints.maxWidth < 600;
+                                final stats = [
+                                  _StatData(HugeIcons.strokeRoundedExchange01, 'Total Swaps', '$swapsCompleted', const Color(0xFF7C3AED)),
+                                  _StatData(HugeIcons.strokeRoundedStar, 'Avg Rating', averageRating > 0 ? averageRating.toStringAsFixed(1) : '-', const Color(0xFFF59E0B)),
+                                  _StatData(HugeIcons.strokeRoundedCoins01, 'Credits', '$swapCredits', const Color(0xFF22C55E)),
+                                  _StatData(HugeIcons.strokeRoundedCalendar03, 'Member Since', joinedAt != null ? _formatMonthYear(joinedAt) : 'Recently', const Color(0xFF60A5FA)),
+                                ];
+                                if (narrow) {
+                                  return Column(
                                     children: [
-                                      Icon(HugeIcons.strokeRoundedUserAccount, size: 18, color: HomePage.accentAlt),
-                                      const SizedBox(width: 10),
-                                      Expanded(
-                                        child: Text(bio, style: const TextStyle(color: HomePage.textPrimary, fontSize: 14, height: 1.5)),
-                                      ),
+                                      Row(children: [
+                                        Expanded(child: _GlassStatCard(data: stats[0])),
+                                        const SizedBox(width: 10),
+                                        Expanded(child: _GlassStatCard(data: stats[1])),
+                                      ]),
+                                      const SizedBox(height: 10),
+                                      Row(children: [
+                                        Expanded(child: _GlassStatCard(data: stats[2])),
+                                        const SizedBox(width: 10),
+                                        Expanded(child: _GlassStatCard(data: stats[3])),
+                                      ]),
                                     ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 16),
-                            Row(
-                              children: [
-                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedExchange01, label: 'Total Swaps', value: '$swapsCompleted')),
-                                const SizedBox(width: ProfilePage._gutter),
-                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedStar, label: 'Avg Rating', value: averageRating > 0 ? averageRating.toStringAsFixed(1) : '-')),
-                                const SizedBox(width: ProfilePage._gutter),
-                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedCoins01, label: 'Credits', value: '$swapCredits')),
-                                const SizedBox(width: ProfilePage._gutter),
-                                Expanded(child: _StatCard(icon: HugeIcons.strokeRoundedCalendar03, label: 'Member Since', value: joinedAt != null ? _formatMonthYear(joinedAt) : 'Recently')),
-                              ],
+                                  );
+                                }
+                                return Row(
+                                  children: [
+                                    for (int i = 0; i < stats.length; i++) ...[
+                                      Expanded(child: _GlassStatCard(data: stats[i])),
+                                      if (i < stats.length - 1) const SizedBox(width: 10),
+                                    ],
+                                  ],
+                                );
+                              },
                             ),
-                            const SizedBox(height: 16),
+
+                            const SizedBox(height: 20),
+
+                            // ===== TABS =====
                             _SegmentedTabs(
-                              skillsLabel: 'My Skills',
+                              skillsLabel: isOwnProfile ? 'My Skills' : 'Skills',
                               reviewsLabel: 'Reviews',
                               activityLabel: 'Swap History',
                               skillsBuilder: () => _SkillsSection(
@@ -202,9 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                 skillsToOffer: skillsToOffer,
                                 servicesNeeded: servicesNeeded,
                                 onPostFirst: () => Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) => const PostSkillPage(),
-                                  ),
+                                  MaterialPageRoute(builder: (_) => const PostSkillPage()),
                                 ),
                               ),
                               reviewsBuilder: () => _ReviewsSection(uid: targetUid),
@@ -225,238 +232,275 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-/* ------------------------------ Pieces ------------------------------ */
+/* ========================== HERO SECTION ========================== */
 
-class _HeaderBanner extends StatelessWidget {
-  const _HeaderBanner({
+class _HeroSection extends StatelessWidget {
+  const _HeroSection({
     required this.name,
     required this.username,
     required this.city,
-    required this.timezone,
+    required this.bio,
     required this.photoUrl,
-    required this.joinedLabel,
-    required this.verified,
-    required this.topRated,
-    this.swapCredits = 0,
-    this.swapsCompleted = 0,
-    this.averageRating = 0.0,
-    this.reviewCount = 0,
-    this.isOwnProfile = true,
+    required this.accountType,
+    required this.averageRating,
+    required this.reviewCount,
+    required this.joinedAt,
+    required this.isOwnProfile,
     this.onEdit,
     this.onSettings,
     this.onEditPhoto,
+    this.onMessage,
   });
 
   final String name;
   final String username;
   final String city;
-  final String timezone;
+  final String bio;
   final String? photoUrl;
-  final String joinedLabel;
-  final bool verified;
-  final bool topRated;
-  final int swapCredits;
-  final int swapsCompleted;
+  final String accountType;
   final double averageRating;
   final int reviewCount;
+  final DateTime? joinedAt;
   final bool isOwnProfile;
   final VoidCallback? onEdit;
   final VoidCallback? onSettings;
   final VoidCallback? onEditPhoto;
+  final VoidCallback? onMessage;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      elevation: 4,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: HomePage.line),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Gradient banner
+          // Gradient cover
           Container(
-            height: 128,
+            height: 140,
+            width: double.infinity,
             decoration: const BoxDecoration(
-              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
               gradient: LinearGradient(
-                colors: [Color(0xFF7C3AED), Color(0xFF4F46E5)],
+                colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF9333EA)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
             child: Stack(
-              clipBehavior: Clip.none,
               children: [
-                // content
-                Padding(
-                  padding: const EdgeInsets.only(top: 44),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(width: 92), // under avatar
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Wrap(
-                              crossAxisAlignment: WrapCrossAlignment.center,
-                              spacing: 10,
-                              runSpacing: 6,
-                              children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    color: HomePage.textPrimary,
-                                    fontSize: 26,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                                StarRating(
-                                  rating: averageRating,
-                                  count: reviewCount,
-                                ),
-                                if (verified)
-                                  _pill(
-                                    icon: Icons.verified,
-                                    label: 'Verified',
-                                    fg: const Color(0xFF22C55E),
-                                  ),
-                                if (topRated)
-                                  _pill(
-                                    icon: Icons.emoji_events_outlined,
-                                    label: 'Top Rated',
-                                    fg: const Color(0xFFF59E0B),
-                                  ),
-                                if (swapCredits > 0)
-                                  _pill(
-                                    icon: Icons.verified_outlined,
-                                    label: '$swapCredits Credits',
-                                    fg: const Color(0xFF22C55E),
-                                  ),
-                                if (swapsCompleted > 0)
-                                  _pill(
-                                    icon: Icons.swap_horiz,
-                                    label: '$swapsCompleted Swap${swapsCompleted == 1 ? '' : 's'}',
-                                    fg: const Color(0xFF7C3AED),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Wrap(
-                              spacing: 16,
-                              runSpacing: 6,
-                              children: [
-                                if (city.isNotEmpty)
-                                  _subInfo(
-                                    icon: Icons.location_on_outlined,
-                                    text: city,
-                                  ),
-                                if (joinedLabel.isNotEmpty)
-                                  _subInfo(
-                                    icon: Icons.calendar_month_outlined,
-                                    text: joinedLabel,
-                                  ),
-                                _subInfo(
-                                  icon: Icons.access_time,
-                                  text: 'Responds in ~2h',
-                                ),
-                              ],
-                            ),
-                          ],
+                // Subtle pattern overlay
+                Positioned.fill(
+                  child: Opacity(
+                    opacity: 0.08,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: RadialGradient(
+                          center: Alignment.topRight,
+                          radius: 1.5,
+                          colors: [Colors.white, Colors.transparent],
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      if (isOwnProfile && onEdit != null && onSettings != null)
-                        Wrap(
-                          spacing: 10,
-                          children: [
-                            _DarkChipButton(
-                              icon: Icons.edit_outlined,
-                              label: 'Edit Profile',
-                              onPressed: onEdit!,
-                            ),
-                            _DarkChipButton(
-                              icon: Icons.settings_outlined,
-                              label: 'Settings',
-                              onPressed: onSettings!,
-                            ),
-                          ],
+                    ),
+                  ),
+                ),
+                // Action buttons in top right of gradient
+                Positioned(
+                  top: 12,
+                  right: 12,
+                  child: Row(
+                    children: [
+                      if (isOwnProfile && onEdit != null)
+                        _GlassActionButton(
+                          icon: HugeIcons.strokeRoundedPencilEdit01,
+                          label: 'Edit Profile',
+                          onTap: onEdit!,
+                        ),
+                      if (isOwnProfile && onSettings != null) ...[
+                        const SizedBox(width: 8),
+                        _GlassActionButton(
+                          icon: HugeIcons.strokeRoundedSettings01,
+                          label: 'Settings',
+                          onTap: onSettings!,
+                        ),
+                      ],
+                      if (!isOwnProfile && onMessage != null)
+                        _GlassActionButton(
+                          icon: HugeIcons.strokeRoundedMessage01,
+                          label: 'Message',
+                          onTap: onMessage!,
+                          accent: true,
                         ),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
 
-                // floating avatar with gradient ring + soft drop shadow
-                Positioned(
-                  left: 0,
-                  top: -42,
-                  child: GestureDetector(
-                    onTap: onEditPhoto,
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(3),
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF9F67FF), Color(0xFF7C3AED)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
+          // Profile info area
+          Container(
+            color: HomePage.surface,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+            child: Column(
+              children: [
+                // Avatar row - overlapping the gradient
+                Transform.translate(
+                  offset: const Offset(0, -40),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Avatar
+                      GestureDetector(
+                        onTap: onEditPhoto,
+                        child: Stack(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: HomePage.surface,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.3),
+                                    blurRadius: 16,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  gradient: LinearGradient(
+                                    colors: [Color(0xFF9F67FF), Color(0xFF7C3AED)],
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                  ),
+                                ),
+                                child: FutureBuilder<String?>(
+                                  future: _resolvePhotoUrl(photoUrl),
+                                  builder: (context, snap) {
+                                    final url = snap.data;
+                                    return CircleAvatar(
+                                      radius: 48,
+                                      backgroundColor: HomePage.surfaceAlt,
+                                      foregroundImage: (url != null && url.isNotEmpty)
+                                          ? NetworkImage(url)
+                                          : null,
+                                      child: (url == null || url.isEmpty)
+                                          ? Text(
+                                              name.isNotEmpty
+                                                  ? name.characters.first.toUpperCase()
+                                                  : 'U',
+                                              style: const TextStyle(
+                                                color: HomePage.textPrimary,
+                                                fontSize: 34,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            )
+                                          : null,
+                                    );
+                                  },
+                                ),
+                              ),
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black38,
-                                blurRadius: 12,
-                                offset: Offset(0, 6),
+                            if (onEditPhoto != null)
+                              Positioned(
+                                right: 2,
+                                bottom: 2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(7),
+                                  decoration: BoxDecoration(
+                                    color: HomePage.accent,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: HomePage.surface, width: 3),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: HomePage.accent.withValues(alpha: 0.4),
+                                        blurRadius: 8,
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 20),
+                      // Name + meta info
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      name,
+                                      style: const TextStyle(
+                                        color: HomePage.textPrimary,
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w800,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                  if (accountType.isNotEmpty) ...[
+                                    const SizedBox(width: 10),
+                                    _AccountTypeBadge(type: accountType),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Wrap(
+                                spacing: 14,
+                                runSpacing: 6,
+                                children: [
+                                  if (username.isNotEmpty)
+                                    _MetaChip(icon: HugeIcons.strokeRoundedUser, text: '@$username'),
+                                  if (city.isNotEmpty)
+                                    _MetaChip(icon: HugeIcons.strokeRoundedLocation01, text: city),
+                                  if (joinedAt != null)
+                                    _MetaChip(icon: HugeIcons.strokeRoundedCalendar03, text: 'Joined ${_formatMonthYear(joinedAt!)}'),
+                                  StarRating(rating: averageRating, count: reviewCount, compact: true),
+                                ],
                               ),
                             ],
                           ),
-                          child: FutureBuilder<String?>(
-                            future: _resolvePhotoUrl(photoUrl),
-                            builder: (context, snap) {
-                              final url = snap.data;
-                              return CircleAvatar(
-                                radius: 42,
-                                backgroundColor: HomePage.surfaceAlt,
-                                foregroundImage: (url != null && url.isNotEmpty)
-                                    ? NetworkImage(url)
-                                    : null,
-                                child: (url == null || url.isEmpty)
-                                    ? Text(
-                                        name.isNotEmpty
-                                            ? name.characters.first.toUpperCase()
-                                            : 'U',
-                                        style: const TextStyle(
-                                          color: HomePage.textPrimary,
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.w700,
-                                        ),
-                                      )
-                                    : null,
-                              );
-                            },
-                          ),
                         ),
-                        if (onEditPhoto != null)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color: HomePage.accent,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: HomePage.surface, width: 2),
-                              ),
-                              child: const Icon(HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
-                            ),
-                          ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
+                // Bio (shifted up to account for the transform)
+                if (bio.isNotEmpty)
+                  Transform.translate(
+                    offset: const Offset(0, -20),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: HomePage.bg,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: HomePage.line),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Icon(HugeIcons.strokeRoundedQuoteDown, size: 18, color: HomePage.accentAlt),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(bio, style: const TextStyle(color: HomePage.textPrimary, fontSize: 14, height: 1.5)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -467,156 +511,176 @@ class _HeaderBanner extends StatelessWidget {
 
   static Future<String?> _resolvePhotoUrl(String? raw) async {
     if (raw == null || raw.isEmpty) return null;
-    return raw; // https URL stored in Cosmos DB
+    return raw;
   }
+}
 
-  static Widget _pill({
-    required IconData icon,
-    required String label,
-    required Color fg,
-  }) {
+class _GlassActionButton extends StatelessWidget {
+  const _GlassActionButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.accent = false,
+  });
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: accent
+          ? HomePage.accent.withValues(alpha: 0.9)
+          : Colors.white.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(10),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 16, color: Colors.white),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AccountTypeBadge extends StatelessWidget {
+  const _AccountTypeBadge({required this.type});
+  final String type;
+
+  @override
+  Widget build(BuildContext context) {
+    final isBusiness = type.toLowerCase() == 'business';
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: HomePage.surfaceAlt,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: HomePage.line),
+        color: (isBusiness ? const Color(0xFF22C55E) : HomePage.accent).withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: (isBusiness ? const Color(0xFF22C55E) : HomePage.accent).withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: fg),
-          const SizedBox(width: 6),
+          Icon(
+            isBusiness ? HugeIcons.strokeRoundedStore01 : HugeIcons.strokeRoundedUser,
+            size: 12,
+            color: isBusiness ? const Color(0xFF22C55E) : HomePage.accentAlt,
+          ),
+          const SizedBox(width: 4),
           Text(
-            label,
-            style: TextStyle(color: fg, fontWeight: FontWeight.w700),
+            isBusiness ? 'Business' : 'Personal',
+            style: TextStyle(
+              color: isBusiness ? const Color(0xFF22C55E) : HomePage.accentAlt,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
     );
   }
+}
 
-  static Widget _subInfo({required IconData icon, required String text}) {
+class _MetaChip extends StatelessWidget {
+  const _MetaChip({required this.icon, required this.text});
+  final IconData icon;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 18, color: const Color(0xFF94A3B8)),
-        const SizedBox(width: 6),
-        Text(
-          text,
-          style: const TextStyle(color: HomePage.textMuted, fontSize: 15),
-        ),
+        Icon(icon, size: 14, color: HomePage.textMuted),
+        const SizedBox(width: 5),
+        Text(text, style: const TextStyle(color: HomePage.textMuted, fontSize: 13)),
       ],
     );
   }
 }
 
-/// Dark pill action like in the screenshot, matching theme
-class _DarkChipButton extends StatelessWidget {
-  const _DarkChipButton({
-    required this.icon,
-    required this.label,
-    required this.onPressed,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onPressed;
+/* ========================== GLASS STAT CARD ========================== */
 
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: HomePage.surfaceAlt,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: BorderSide(color: HomePage.line),
-      ),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(14),
-        onTap: onPressed,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18, color: HomePage.textPrimary),
-              const SizedBox(width: 8),
-              Text(
-                label,
-                style: const TextStyle(
-                  color: HomePage.textPrimary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatCard extends StatelessWidget {
-  const _StatCard({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+class _StatData {
+  const _StatData(this.icon, this.label, this.value, this.color);
   final IconData icon;
   final String label;
   final String value;
+  final Color color;
+}
+
+class _GlassStatCard extends StatelessWidget {
+  const _GlassStatCard({required this.data});
+  final _StatData data;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      child: Card(
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
         color: HomePage.surface,
-        elevation: 0,
-        shadowColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: HomePage.line),
+        border: Border.all(color: HomePage.line),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            data.color.withValues(alpha: 0.06),
+            HomePage.surface,
+          ],
         ),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: HomePage.surfaceAlt,
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(color: HomePage.line),
-                ),
-                child: Icon(icon, color: HomePage.accentAlt),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: HomePage.accentAlt,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    label,
-                    style: const TextStyle(color: HomePage.textMuted),
-                  ),
-                ],
-              ),
-            ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              color: data.color.withValues(alpha: 0.12),
+              border: Border.all(color: data.color.withValues(alpha: 0.2)),
+            ),
+            child: Icon(data.icon, color: data.color, size: 20),
           ),
-        ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  data.value,
+                  style: TextStyle(
+                    color: data.color,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  data.label,
+                  style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
+
+/* ========================== SEGMENTED TABS ========================== */
 
 class _SegmentedTabs extends StatefulWidget {
   const _SegmentedTabs({
@@ -645,9 +709,8 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // dark pill bar
         Container(
-          height: 52,
+          height: 48,
           decoration: BoxDecoration(
             color: HomePage.surface,
             borderRadius: BorderRadius.circular(14),
@@ -661,9 +724,9 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
             ],
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 14),
         AnimatedSwitcher(
-          duration: const Duration(milliseconds: 180),
+          duration: const Duration(milliseconds: 200),
           child: switch (_index) {
             0 => widget.skillsBuilder(),
             1 => widget.reviewsBuilder(),
@@ -678,35 +741,26 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
     final active = _index == i;
     return Expanded(
       child: Padding(
-        padding: const EdgeInsets.all(6),
+        padding: const EdgeInsets.all(5),
         child: InkWell(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           onTap: () => setState(() => _index = i),
           child: Container(
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: active ? HomePage.surfaceAlt : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+              color: active ? HomePage.accent.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(10),
               border: Border.all(
-                color: active ? HomePage.accentAlt : HomePage.line,
-                width: active ? 2 : 1,
+                color: active ? HomePage.accent : Colors.transparent,
+                width: 1.5,
               ),
-              boxShadow: active
-                  ? const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 8,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
-                  : null,
             ),
             child: Text(
               label,
               style: TextStyle(
-                color: active ? HomePage.textPrimary : HomePage.textMuted,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w600,
-                fontSize: 14,
+                color: active ? HomePage.accentAlt : HomePage.textMuted,
+                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                fontSize: 13,
               ),
             ),
           ),
@@ -715,6 +769,8 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
     );
   }
 }
+
+/* ========================== SKILLS SECTION ========================== */
 
 class _SkillsSection extends StatefulWidget {
   const _SkillsSection({
@@ -780,32 +836,47 @@ class _SkillsSectionState extends State<_SkillsSection> {
     final skills = _skills ?? [];
     if (skills.isEmpty) return _EmptySkills(onPostFirst: widget.onPostFirst);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        for (final skill in skills) ...[
-          _SkillCardItem(
-            skill: skill,
-            showDelete: widget.isOwnProfile,
-            onDelete: () => _deleteSkill(skill),
-          ),
-          const SizedBox(height: 10),
-        ],
-        if (widget.servicesNeeded.trim().isNotEmpty) ...[
-          const SizedBox(height: 4),
-          _SectionCard(
-            title: 'Services I Need',
-            child: Text(widget.servicesNeeded,
-                style: const TextStyle(color: HomePage.textPrimary)),
-          ),
-        ],
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final crossAxisCount = constraints.maxWidth >= 700 ? 2 : 1;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                mainAxisExtent: 220,
+              ),
+              itemCount: skills.length,
+              itemBuilder: (context, i) => _ProfileSkillCard(
+                skill: skills[i],
+                showDelete: widget.isOwnProfile,
+                onDelete: () => _deleteSkill(skills[i]),
+              ),
+            ),
+            if (widget.servicesNeeded.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _InfoCard(
+                icon: HugeIcons.strokeRoundedSearchList01,
+                title: 'Looking For',
+                content: widget.servicesNeeded,
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 }
 
-class _SkillCardItem extends StatelessWidget {
-  const _SkillCardItem({
+/* ========================== PROFILE SKILL CARD ========================== */
+
+class _ProfileSkillCard extends StatelessWidget {
+  const _ProfileSkillCard({
     required this.skill,
     this.showDelete = false,
     this.onDelete,
@@ -814,113 +885,157 @@ class _SkillCardItem extends StatelessWidget {
   final bool showDelete;
   final VoidCallback? onDelete;
 
+  static IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return HugeIcons.strokeRoundedPaintBrush01;
+      case 'development':
+      case 'programming':
+        return HugeIcons.strokeRoundedSourceCode;
+      case 'business':
+        return HugeIcons.strokeRoundedChart;
+      case 'music':
+        return HugeIcons.strokeRoundedMusicNote01;
+      case 'language':
+        return HugeIcons.strokeRoundedTranslation;
+      case 'writing':
+        return HugeIcons.strokeRoundedQuillWrite01;
+      case 'tutoring':
+        return HugeIcons.strokeRoundedTeacher;
+      case 'cooking':
+        return HugeIcons.strokeRoundedChefHat;
+      case 'photography':
+        return HugeIcons.strokeRoundedCamera01;
+      case 'marketing':
+        return HugeIcons.strokeRoundedMegaphone01;
+      case 'fitness':
+        return HugeIcons.strokeRoundedDumbbell01;
+      default:
+        return HugeIcons.strokeRoundedStars;
+    }
+  }
+
   static Color _categoryColor(String category) {
     switch (category.toLowerCase()) {
-      case 'design': return const Color(0xFFEC4899);
-      case 'development': return const Color(0xFF3B82F6);
-      case 'business': return const Color(0xFF22C55E);
-      case 'writing': return const Color(0xFFF59E0B);
-      case 'language': return const Color(0xFF8B5CF6);
-      case 'tutoring': return const Color(0xFF06B6D4);
-      case 'music': return const Color(0xFFEF4444);
-      default: return const Color(0xFF6B7280);
+      case 'design':
+        return const Color(0xFFE879F9);
+      case 'development':
+      case 'programming':
+        return const Color(0xFF60A5FA);
+      case 'business':
+        return const Color(0xFF34D399);
+      case 'music':
+        return const Color(0xFFFBBF24);
+      case 'language':
+        return const Color(0xFFF87171);
+      case 'writing':
+        return const Color(0xFF818CF8);
+      case 'tutoring':
+        return const Color(0xFF2DD4BF);
+      case 'cooking':
+        return const Color(0xFFFF9F43);
+      case 'photography':
+        return const Color(0xFFFF6B6B);
+      case 'marketing':
+        return const Color(0xFF48DBFB);
+      case 'fitness':
+        return const Color(0xFF1DD1A1);
+      default:
+        return const Color(0xFF94A3B8);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      elevation: 0,
-      clipBehavior: Clip.hardEdge,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
+    final catColor = _categoryColor(skill.category);
+    final catIcon = _categoryIcon(skill.category);
+
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: HomePage.surface,
+        border: Border.all(color: HomePage.line),
       ),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+      clipBehavior: Clip.antiAlias,
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border(left: BorderSide(color: catColor, width: 4)),
+        ),
+        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 4,
-              decoration: BoxDecoration(
-                color: _categoryColor(skill.category),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  bottomLeft: Radius.circular(12),
+            // Title row with category badge
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    skill.title,
+                    style: const TextStyle(
+                      color: HomePage.textPrimary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
+                _badge(skill.category, catColor, icon: catIcon),
+                if (showDelete) ...[
+                  const SizedBox(width: 6),
+                  InkWell(
+                    onTap: onDelete,
+                    borderRadius: BorderRadius.circular(8),
+                    child: const Padding(
+                      padding: EdgeInsets.all(4),
+                      child: Icon(HugeIcons.strokeRoundedDelete02, size: 16, color: Color(0xFFEF4444)),
+                    ),
+                  ),
+                ],
+              ],
             ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            skill.title,
-                            style: const TextStyle(
-                              color: HomePage.textPrimary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        _badge(skill.category, _categoryColor(skill.category)),
-                        const SizedBox(width: 6),
-                        _badge(skill.difficulty, const Color(0xFFF59E0B)),
-                        if (showDelete) ...[
-                          const SizedBox(width: 8),
-                          InkWell(
-                            onTap: onDelete,
-                            borderRadius: BorderRadius.circular(8),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    if (skill.description.isNotEmpty) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        skill.description,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        _infoPill(HugeIcons.strokeRoundedClock01, '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h'),
-                        const SizedBox(width: 8),
-                        _infoPill(HugeIcons.strokeRoundedLocation01, skill.delivery),
-                      ],
-                    ),
-                    if (skill.tags.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 4,
-                        children: skill.tags.map((t) => Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                          decoration: BoxDecoration(
-                            color: HomePage.surfaceAlt,
-                            borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: HomePage.line),
-                          ),
-                          child: Text(t, style: const TextStyle(color: HomePage.textPrimary, fontSize: 11)),
-                        )).toList(),
-                      ),
-                    ],
-                  ],
+            const SizedBox(height: 8),
+            // Description
+            if (skill.description.isNotEmpty)
+              Expanded(
+                child: Text(
+                  skill.description,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(color: HomePage.textMuted, fontSize: 13, height: 1.4),
                 ),
               ),
+            if (skill.description.isEmpty) const Spacer(),
+            const SizedBox(height: 8),
+            // Tags
+            if (skill.tags.isNotEmpty)
+              SizedBox(
+                height: 26,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: skill.tags.length > 4 ? 4 : skill.tags.length,
+                  separatorBuilder: (_, __) => const SizedBox(width: 6),
+                  itemBuilder: (_, i) {
+                    if (i == 3 && skill.tags.length > 4) {
+                      return _tagChip('+${skill.tags.length - 3}', highlight: true, color: catColor);
+                    }
+                    return _tagChip(skill.tags[i], color: catColor);
+                  },
+                ),
+              ),
+            const SizedBox(height: 8),
+            // Bottom row: difficulty, hours, delivery
+            Row(
+              children: [
+                _pill(skill.difficulty, const Color(0xFFF59E0B)),
+                const SizedBox(width: 8),
+                _pill(skill.delivery, HomePage.textMuted),
+                const SizedBox(width: 8),
+                _pill(
+                  '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h',
+                  HomePage.textMuted,
+                ),
+              ],
             ),
           ],
         ),
@@ -928,7 +1043,7 @@ class _SkillCardItem extends StatelessWidget {
     );
   }
 
-  static Widget _badge(String text, Color color) {
+  static Widget _badge(String text, Color color, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -936,191 +1051,91 @@ class _SkillCardItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
 
-  static Widget _infoPill(IconData icon, String text) {
+  static Widget _pill(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: HomePage.surfaceAlt,
+        color: HomePage.bg,
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: HomePage.line),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Text(text, style: TextStyle(color: color, fontSize: 11)),
+    );
+  }
+
+  static Widget _tagChip(String text, {bool highlight = false, Color? color}) {
+    final c = color ?? HomePage.accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: highlight ? c.withValues(alpha: 0.15) : c.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: c.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: highlight ? c : HomePage.textPrimary,
+          fontSize: 11,
+          fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+/* ========================== INFO CARD ========================== */
+
+class _InfoCard extends StatelessWidget {
+  const _InfoCard({required this.icon, required this.title, required this.content});
+  final IconData icon;
+  final String title;
+  final String content;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: HomePage.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: HomePage.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 13, color: HomePage.textMuted),
-          const SizedBox(width: 4),
-          Text(text, style: const TextStyle(color: HomePage.textMuted, fontSize: 11)),
+          Row(
+            children: [
+              Icon(icon, size: 16, color: HomePage.accentAlt),
+              const SizedBox(width: 8),
+              Text(title, style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(content, style: const TextStyle(color: HomePage.textMuted, fontSize: 13, height: 1.4)),
         ],
       ),
     );
   }
 }
 
-class _SectionCard extends StatelessWidget {
-  const _SectionCard({required this.title, required this.child});
-  final String title;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                color: HomePage.textPrimary,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 10),
-            child,
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/* ---------------------------- Placeholders ---------------------------- */
-
-class _EmptyProfileCard extends StatelessWidget {
-  const _EmptyProfileCard({required this.onSetup});
-  final VoidCallback onSetup;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Card(
-        color: HomePage.surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: HomePage.line),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.person_outline,
-                size: 40,
-                color: HomePage.textMuted,
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                "Let's set up your profile",
-                style: TextStyle(
-                  color: HomePage.textPrimary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17,
-                ),
-              ),
-              const SizedBox(height: 6),
-              const Text(
-                "We'll use your details to personalize your page.",
-                style: TextStyle(color: HomePage.textMuted),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 42,
-                child: FilledButton(
-                  onPressed: onSetup,
-                  style: FilledButton.styleFrom(
-                    backgroundColor: HomePage.accent,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Complete Profile'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptySkills extends StatelessWidget {
-  const _EmptySkills({required this.onPostFirst});
-  final VoidCallback onPostFirst;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      color: HomePage.surface,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: HomePage.line),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 26, 18, 28),
-        child: Column(
-          children: [
-            CircleAvatar(
-              radius: 42,
-              backgroundColor: HomePage.surfaceAlt,
-              child: Icon(
-                Icons.person_outline,
-                color: HomePage.textMuted,
-                size: 40,
-              ),
-            ),
-            const SizedBox(height: 12),
-            const Text(
-              'No skills posted yet',
-              style: TextStyle(
-                color: HomePage.textPrimary,
-                fontWeight: FontWeight.w800,
-                fontSize: 18,
-              ),
-            ),
-            const SizedBox(height: 6),
-            const Text(
-              'Share your expertise with the community',
-              style: TextStyle(color: HomePage.textMuted),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              height: 44,
-              child: FilledButton(
-                onPressed: onPostFirst,
-                style: FilledButton.styleFrom(
-                  backgroundColor: HomePage.accent,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Post Your First Skill'),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+/* ========================== REVIEWS SECTION ========================== */
 
 class _ReviewsSection extends StatefulWidget {
   const _ReviewsSection({required this.uid});
@@ -1162,21 +1177,24 @@ class _ReviewsSectionState extends State<_ReviewsSection> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(24),
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Center(child: Padding(padding: EdgeInsets.all(24), child: CircularProgressIndicator()));
     }
 
     final reviews = _reviews ?? [];
     if (reviews.isEmpty) {
-      return _SectionCard(
-        title: 'Reviews',
-        child: const Text(
-          'No reviews yet.',
-          style: TextStyle(color: HomePage.textMuted),
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: HomePage.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: HomePage.line),
+        ),
+        child: Column(
+          children: [
+            Icon(HugeIcons.strokeRoundedStar, size: 40, color: HomePage.textMuted.withValues(alpha: 0.5)),
+            const SizedBox(height: 10),
+            const Text('No reviews yet', style: TextStyle(color: HomePage.textMuted, fontSize: 15)),
+          ],
         ),
       );
     }
@@ -1184,30 +1202,41 @@ class _ReviewsSectionState extends State<_ReviewsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Summary
-        Card(
-          color: HomePage.surface,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
+        // Summary bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: HomePage.surface,
             borderRadius: BorderRadius.circular(12),
-            side: BorderSide(color: HomePage.line),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                StarRating(rating: _avgRating, count: _total),
-                const Spacer(),
-                Text(
-                  '$_total review${_total == 1 ? '' : 's'}',
-                  style: const TextStyle(color: HomePage.textMuted, fontSize: 13),
-                ),
-              ],
+            border: Border.all(color: HomePage.line),
+            gradient: LinearGradient(
+              colors: [const Color(0xFFF59E0B).withValues(alpha: 0.06), HomePage.surface],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
             ),
+          ),
+          child: Row(
+            children: [
+              Text(
+                _avgRating.toStringAsFixed(1),
+                style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 28, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(width: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  StarRating(rating: _avgRating, compact: true),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$_total review${_total == 1 ? '' : 's'}',
+                    style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 10),
-        // Individual reviews
         for (final review in reviews) ...[
           _ReviewCard(review: review),
           const SizedBox(height: 8),
@@ -1225,81 +1254,88 @@ class _ReviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final date = DateTime.tryParse(review.createdAt);
     final dateStr = date != null
-        ? '${date.day}/${date.month}/${date.year}'
+        ? '${_monthName(date.month)} ${date.day}, ${date.year}'
         : '';
 
-    return Card(
-      color: HomePage.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: HomePage.surface,
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: HomePage.line),
+        border: Border.all(color: HomePage.line),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 16,
-                  backgroundColor: HomePage.surfaceAlt,
-                  foregroundImage: review.reviewerPhoto != null && review.reviewerPhoto!.isNotEmpty
-                      ? NetworkImage(review.reviewerPhoto!)
-                      : null,
-                  child: Text(
-                    (review.reviewerName ?? 'U').characters.first.toUpperCase(),
-                    style: const TextStyle(color: HomePage.textPrimary, fontSize: 13),
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 18,
+                backgroundColor: HomePage.accent.withValues(alpha: 0.15),
+                foregroundImage: review.reviewerPhoto != null && review.reviewerPhoto!.isNotEmpty
+                    ? NetworkImage(review.reviewerPhoto!)
+                    : null,
+                child: Text(
+                  (review.reviewerName ?? 'U').characters.first.toUpperCase(),
+                  style: const TextStyle(color: HomePage.accentAlt, fontSize: 14, fontWeight: FontWeight.w600),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        review.reviewerName ?? 'Anonymous',
-                        style: const TextStyle(
-                          color: HomePage.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          StarRating(rating: review.rating.toDouble(), compact: true),
-                          if (dateStr.isNotEmpty) ...[
-                            const SizedBox(width: 8),
-                            Text(dateStr, style: const TextStyle(color: HomePage.textMuted, fontSize: 11)),
-                          ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      review.reviewerName ?? 'Anonymous',
+                      style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                    ),
+                    Row(
+                      children: [
+                        StarRating(rating: review.rating.toDouble(), compact: true),
+                        if (dateStr.isNotEmpty) ...[
+                          const SizedBox(width: 8),
+                          Text(dateStr, style: const TextStyle(color: HomePage.textMuted, fontSize: 11)),
                         ],
-                      ),
-                    ],
-                  ),
+                      ],
+                    ),
+                  ],
                 ),
-              ],
+              ),
+            ],
+          ),
+          if (review.skillExchanged != null && review.skillExchanged!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: HomePage.accent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                review.skillExchanged!,
+                style: const TextStyle(color: HomePage.accentAlt, fontSize: 11, fontWeight: FontWeight.w500),
+              ),
             ),
-            if (review.skillExchanged != null && review.skillExchanged!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                'Skill: ${review.skillExchanged}',
-                style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
-              ),
-            ],
-            if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              Text(
-                review.reviewText!,
-                style: const TextStyle(color: HomePage.textPrimary, fontSize: 13, height: 1.4),
-              ),
-            ],
           ],
-        ),
+          if (review.reviewText != null && review.reviewText!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              review.reviewText!,
+              style: const TextStyle(color: HomePage.textPrimary, fontSize: 13, height: 1.5),
+            ),
+          ],
+        ],
       ),
     );
   }
+
+  static String _monthName(int m) {
+    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    return months[m - 1];
+  }
 }
+
+/* ========================== SWAP HISTORY SECTION ========================== */
 
 class _SwapHistorySection extends StatefulWidget {
   const _SwapHistorySection({required this.uid});
@@ -1358,9 +1394,20 @@ class _SwapHistorySectionState extends State<_SwapHistorySection> {
 
     final swaps = _swaps ?? [];
     if (swaps.isEmpty) {
-      return _SectionCard(
-        title: 'Swap History',
-        child: const Text('No completed swaps yet.', style: TextStyle(color: HomePage.textMuted)),
+      return Container(
+        padding: const EdgeInsets.all(32),
+        decoration: BoxDecoration(
+          color: HomePage.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: HomePage.line),
+        ),
+        child: Column(
+          children: [
+            Icon(HugeIcons.strokeRoundedExchange01, size: 40, color: HomePage.textMuted.withValues(alpha: 0.5)),
+            const SizedBox(height: 10),
+            const Text('No completed swaps yet', style: TextStyle(color: HomePage.textMuted, fontSize: 15)),
+          ],
+        ),
       );
     }
 
@@ -1391,77 +1438,111 @@ class _SwapHistoryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isIncoming = swap.recipientUid == currentUid;
     final other = isIncoming ? swap.requesterProfile : swap.recipientProfile;
-    final statusColor = swap.isCompleted ? HomePage.success : Colors.greenAccent;
+    final isCompleted = swap.isCompleted;
+    final statusColor = isCompleted ? HomePage.success : const Color(0xFF60A5FA);
+    final statusLabel = swap.status.name.toUpperCase();
     final date = swap.respondedAt ?? swap.updatedAt;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: Card(
-        color: HomePage.surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: HomePage.surface,
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: HomePage.line),
+          border: Border.all(color: HomePage.line),
         ),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              CircleAvatar(
-                radius: 20,
-                backgroundColor: HomePage.surfaceAlt,
-                backgroundImage: (other?.photoUrl != null && other!.photoUrl!.isNotEmpty) ? NetworkImage(other.photoUrl!) : null,
-                child: (other?.photoUrl == null || other!.photoUrl!.isEmpty)
-                    ? Text((other?.displayName ?? 'U').characters.first.toUpperCase(), style: const TextStyle(color: HomePage.textPrimary))
-                    : null,
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      other?.displayName ?? 'Unknown user',
-                      style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${swap.requesterOffer}  \u2192  ${swap.requesterNeed}',
-                      style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 22,
+              backgroundColor: HomePage.accent.withValues(alpha: 0.15),
+              backgroundImage: (other?.photoUrl != null && other!.photoUrl!.isNotEmpty) ? NetworkImage(other.photoUrl!) : null,
+              child: (other?.photoUrl == null || other!.photoUrl!.isEmpty)
+                  ? Text(
+                      (other?.displayName ?? 'U').characters.first.toUpperCase(),
+                      style: const TextStyle(color: HomePage.accentAlt, fontWeight: FontWeight.w600),
+                    )
+                  : null,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: statusColor.withValues(alpha: 0.4)),
-                    ),
-                    child: Text(
-                      swap.status.name.toUpperCase(),
-                      style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w700),
-                    ),
+                  Text(
+                    other?.displayName ?? 'Unknown user',
+                    style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
-                  Text(
-                    _formatDate(date),
-                    style: const TextStyle(color: HomePage.textMuted, fontSize: 11),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: HomePage.bg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            swap.requesterOffer,
+                            style: const TextStyle(color: HomePage.textPrimary, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 6),
+                        child: Icon(HugeIcons.strokeRoundedArrowDataTransferHorizontal, size: 14, color: HomePage.accentAlt),
+                      ),
+                      Flexible(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: HomePage.bg,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            swap.requesterNeed,
+                            style: const TextStyle(color: HomePage.textPrimary, fontSize: 11),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              if (onTap != null) ...[
-                const SizedBox(width: 8),
-                Icon(HugeIcons.strokeRoundedMessage01, size: 18, color: HomePage.accentAlt),
+            ),
+            const SizedBox(width: 8),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: statusColor.withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    statusLabel,
+                    style: TextStyle(color: statusColor, fontSize: 10, fontWeight: FontWeight.w700),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _formatDate(date),
+                  style: const TextStyle(color: HomePage.textMuted, fontSize: 11),
+                ),
               ],
+            ),
+            if (onTap != null) ...[
+              const SizedBox(width: 8),
+              Icon(HugeIcons.strokeRoundedMessage01, size: 18, color: HomePage.accentAlt),
             ],
-          ),
+          ],
         ),
       ),
     );
@@ -1470,6 +1551,119 @@ class _SwapHistoryCard extends StatelessWidget {
   static String _formatDate(DateTime d) {
     const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
     return '${months[d.month - 1]} ${d.day}';
+  }
+}
+
+/* ========================== PLACEHOLDERS ========================== */
+
+class _EmptyProfileCard extends StatelessWidget {
+  const _EmptyProfileCard({required this.onSetup});
+  final VoidCallback onSetup;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.all(32),
+        constraints: const BoxConstraints(maxWidth: 400),
+        decoration: BoxDecoration(
+          color: HomePage.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: HomePage.line),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: HomePage.accent.withValues(alpha: 0.1),
+              ),
+              child: const Icon(HugeIcons.strokeRoundedUser, size: 40, color: HomePage.accentAlt),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Let's set up your profile",
+              style: TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              "We'll use your details to personalize your page.",
+              style: TextStyle(color: HomePage.textMuted, fontSize: 14),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              height: 44,
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: onSetup,
+                style: FilledButton.styleFrom(
+                  backgroundColor: HomePage.accent,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                child: const Text('Complete Profile'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EmptySkills extends StatelessWidget {
+  const _EmptySkills({required this.onPostFirst});
+  final VoidCallback onPostFirst;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+      decoration: BoxDecoration(
+        color: HomePage.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: HomePage.line),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: HomePage.accent.withValues(alpha: 0.1),
+            ),
+            child: const Icon(HugeIcons.strokeRoundedStars, size: 36, color: HomePage.accentAlt),
+          ),
+          const SizedBox(height: 14),
+          const Text(
+            'No skills posted yet',
+            style: TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Share your expertise with the community',
+            style: TextStyle(color: HomePage.textMuted),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 44,
+            child: FilledButton.icon(
+              onPressed: onPostFirst,
+              icon: const Icon(HugeIcons.strokeRoundedAdd01, size: 18),
+              label: const Text('Post Your First Skill'),
+              style: FilledButton.styleFrom(
+                backgroundColor: HomePage.accent,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -1487,28 +1681,9 @@ class _AuthGuard extends StatelessWidget {
   }
 }
 
-/* ----------------------------- Utilities ----------------------------- */
-
-DateTime? _parseJoinedAt(dynamic v) {
-  if (v == null) return null;
-  if (v is String) return DateTime.tryParse(v);
-  return null;
-}
+/* ========================== UTILITIES ========================== */
 
 String _formatMonthYear(DateTime d) {
-  const months = [
-    'Jan',
-    'Feb',
-    'Mar',
-    'Apr',
-    'May',
-    'Jun',
-    'Jul',
-    'Aug',
-    'Sep',
-    'Oct',
-    'Nov',
-    'Dec',
-  ];
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   return '${months[d.month - 1]} ${d.year}';
 }
