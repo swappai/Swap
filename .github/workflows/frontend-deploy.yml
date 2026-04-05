@@ -14,7 +14,7 @@ on:
 env:
   FLUTTER_VERSION: "3.41.5"
   API_BASE_URL: "https://app-swapai-backend.azurewebsites.net"
-  ENTRA_REDIRECT_URI: "https://stwa-swap-dev.azurestaticapps.net/"
+  ENTRA_REDIRECT_URI: "https://red-sea-09c59bb10.2.azurestaticapps.net/"
   ENTRA_TENANT_NAME: "swapauth"
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -93,7 +93,7 @@ jobs:
         run: |
           sleep 10
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            https://stwa-swap-dev.azurestaticapps.net/)
+            https://red-sea-09c59bb10.2.azurestaticapps.net/)
           echo "Frontend health check returned: $STATUS"
           if [ "$STATUS" != "200" ]; then
             echo "::warning::Frontend returned $STATUS (may still be propagating)"

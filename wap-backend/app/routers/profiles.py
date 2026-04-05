@@ -50,8 +50,9 @@ def upsert_profile(profile_data: ProfileCreate):
         "dm_open": profile_data.dm_open if profile_data.dm_open is not None else True,
         "email_updates": profile_data.email_updates if profile_data.email_updates is not None else True,
         "show_city": profile_data.show_city if profile_data.show_city is not None else True,
+        "account_type": profile_data.account_type if profile_data.account_type else "person",
     }
-    
+
     # Upsert to Cosmos DB
     saved_profile = cosmos_service.upsert_profile(profile_data.uid, profile_dict)
     
@@ -79,6 +80,7 @@ def upsert_profile(profile_data: ProfileCreate):
             "services_needed": profile_data.services_needed,
             "dm_open": profile_data.dm_open if profile_data.dm_open is not None else True,
             "show_city": profile_data.show_city if profile_data.show_city is not None else True,
+            "account_type": profile_data.account_type if profile_data.account_type else "person",
             "swap_credits": saved_profile.get("swap_credits", 0),
             "swaps_completed": saved_profile.get("swaps_completed", 0),
         }
@@ -150,6 +152,13 @@ def update_profile(uid: str, profile_update: ProfileUpdate):
     # Update Cosmos DB
     updated_profile = cosmos_service.update_profile(uid, update_dict)
     
+    # If account_type changed, update search index
+    if 'account_type' in update_dict and 'skills_to_offer' not in update_dict and 'services_needed' not in update_dict:
+        try:
+            search_service.update_profile_field(uid, "account_type", updated_profile.get('account_type', 'person'))
+        except Exception:
+            pass
+
     # If skills changed, update search index embeddings
     if 'skills_to_offer' in update_dict or 'services_needed' in update_dict:
         skills_to_offer = updated_profile.get('skills_to_offer', existing_profile.get('skills_to_offer', ''))
@@ -177,6 +186,7 @@ def update_profile(uid: str, profile_update: ProfileUpdate):
                 "services_needed": services_needed,
                 "dm_open": updated_profile.get('dm_open', True),
                 "show_city": updated_profile.get('show_city', True),
+                "account_type": updated_profile.get('account_type', 'person'),
                 "swap_credits": updated_profile.get('swap_credits', 0),
                 "swaps_completed": updated_profile.get('swaps_completed', 0),
             }
