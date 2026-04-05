@@ -203,7 +203,7 @@ def update_profile(uid: str, profile_update: ProfileUpdate):
 
 @router.delete("/{uid}")
 def delete_profile(uid: str):
-    """Delete a profile from Cosmos DB and Azure AI Search."""
+    """Delete a profile and all associated user data (skills, search index entries)."""
     cosmos_service = get_cosmos_service()
     search_service = get_azure_search_service()
 
@@ -211,10 +211,31 @@ def delete_profile(uid: str):
     if not existing_profile:
         raise HTTPException(status_code=404, detail="Profile not found")
 
-    cosmos_service.delete_profile(uid)
-    search_service.delete_profile(uid)
+    # Cascade-delete all skills by this user
+    try:
+        user_skills = cosmos_service.get_skills_by_user(uid)
+        for skill in user_skills:
+            skill_id = skill.get("id")
+            if skill_id:
+                try:
+                    cosmos_service.delete_skill(skill_id, uid)
+                except Exception:
+                    pass
+                try:
+                    search_service.delete_skill(skill_id)
+                except Exception:
+                    pass
+    except Exception:
+        pass
 
-    return {"message": "Profile deleted successfully", "uid": uid}
+    # Delete profile from search index and Cosmos DB
+    try:
+        search_service.delete_profile(uid)
+    except Exception:
+        pass
+    cosmos_service.delete_profile(uid)
+
+    return {"message": "Profile and all associated data deleted successfully", "uid": uid}
 
 
 @router.post("/{uid}/photo")

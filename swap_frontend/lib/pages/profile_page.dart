@@ -19,6 +19,7 @@ import 'post_skill_page.dart';
 import 'onboarding.dart';
 import 'edit_profile_page.dart';
 import 'messages/chat_page.dart';
+import 'settings_page.dart';
 
 // Restrained palette — 5 muted category tones
 const _catPurple = Color(0xFFA78BFA); // Design/Writing/Photo
@@ -187,8 +188,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                   : null,
                               onSettings: isOwnProfile
                                   ? () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Settings coming soon')),
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(builder: (_) => const SettingsPage()),
                                       );
                                     }
                                   : null,

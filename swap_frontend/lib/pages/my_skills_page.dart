@@ -319,7 +319,7 @@ class _SkillCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      _badge(skill.category, HomePage.accent),
+                      _badge(skill.category, _categoryColor(skill.category), icon: _categoryIcon(skill.category)),
                       const SizedBox(width: 6),
                       _badge(skill.difficulty, const Color(0xFFF59E0B)),
                       const SizedBox(width: 12),
@@ -388,7 +388,37 @@ class _SkillCard extends StatelessWidget {
     );
   }
 
-  static Widget _badge(String text, Color color) {
+  static IconData _categoryIcon(String category) {
+    switch (category) {
+      case 'Design':
+        return HugeIcons.strokeRoundedPaintBrush01;
+      case 'Development':
+      case 'Programming':
+        return HugeIcons.strokeRoundedSourceCode;
+      case 'Business':
+        return HugeIcons.strokeRoundedChart;
+      case 'Music':
+        return HugeIcons.strokeRoundedMusicNote01;
+      case 'Language':
+        return HugeIcons.strokeRoundedTranslation;
+      case 'Writing':
+        return HugeIcons.strokeRoundedQuillWrite01;
+      case 'Tutoring':
+        return HugeIcons.strokeRoundedTeacher;
+      case 'Cooking':
+        return HugeIcons.strokeRoundedChefHat;
+      case 'Photography':
+        return HugeIcons.strokeRoundedCamera01;
+      case 'Marketing':
+        return HugeIcons.strokeRoundedMegaphone01;
+      case 'Fitness':
+        return HugeIcons.strokeRoundedDumbbell01;
+      default:
+        return HugeIcons.strokeRoundedStars;
+    }
+  }
+
+  static Widget _badge(String text, Color color, {IconData? icon}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -396,9 +426,18 @@ class _SkillCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.4)),
       ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }

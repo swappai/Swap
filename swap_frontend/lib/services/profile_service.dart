@@ -115,4 +115,12 @@ class ProfileService {
       );
     }
   }
+
+  Future<void> deleteProfile(String uid) async {
+    final uri = Uri.parse('$baseUrl/profiles/$uid');
+    final resp = await http.delete(uri).timeout(const Duration(seconds: 15));
+    if (resp.statusCode != 200) {
+      throw Exception('Delete failed: ${resp.statusCode} ${resp.body}');
+    }
+  }
 }

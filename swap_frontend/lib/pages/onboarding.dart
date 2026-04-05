@@ -186,14 +186,18 @@ class _ProfileSetupFlowState extends State<ProfileSetupFlow> {
         timeout: const Duration(seconds: 12),
       );
 
-      // Upload avatar if newly picked
+      // Upload avatar if newly picked — must complete before navigating away
       if (_avatar != null) {
         try {
           final bytes = await _avatar!.readAsBytes();
           final filename = _avatar!.path.split('/').last;
           await ProfileService().uploadPhoto(user.uid, bytes, filename);
         } catch (e) {
-          debugPrint('Photo upload error (non-fatal): $e');
+          debugPrint('Photo upload error: $e');
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Photo upload failed: $e')),
+          );
         }
       }
 
