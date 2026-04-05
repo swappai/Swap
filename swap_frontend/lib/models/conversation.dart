@@ -11,6 +11,7 @@ class Message {
   final String senderUid;
   final String content;
   final DateTime sentAt;
+  final DateTime? deliveredAt;
   final DateTime? readAt;
   final List<String> readBy;
   final MessageType type;
@@ -21,6 +22,7 @@ class Message {
     required this.senderUid,
     required this.content,
     required this.sentAt,
+    this.deliveredAt,
     this.readAt,
     this.readBy = const [],
     this.type = MessageType.text,
@@ -34,6 +36,9 @@ class Message {
         sentAt: json['sent_at'] != null
             ? DateTime.parse(json['sent_at'] as String)
             : DateTime.now(),
+        deliveredAt: json['delivered_at'] != null
+            ? DateTime.parse(json['delivered_at'] as String)
+            : null,
         readAt: json['read_at'] != null
             ? DateTime.parse(json['read_at'] as String)
             : null,
@@ -50,6 +55,7 @@ class Message {
         'sender_uid': senderUid,
         'content': content,
         'sent_at': sentAt.toIso8601String(),
+        'delivered_at': deliveredAt?.toIso8601String(),
         'read_at': readAt?.toIso8601String(),
         'read_by': readBy,
         'type': type == MessageType.system ? 'system' : 'text',

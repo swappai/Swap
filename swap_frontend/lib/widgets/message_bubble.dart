@@ -8,14 +8,14 @@ import '../pages/home_page.dart';
 class MessageBubble extends StatelessWidget {
   final Message message;
   final bool isMe;
-  final bool showReadReceipt;
 
   const MessageBubble({
     super.key,
     required this.message,
     required this.isMe,
-    this.showReadReceipt = false,
   });
+
+  static const _whatsappBlue = Color(0xFF53BDEB);
 
   @override
   Widget build(BuildContext context) {
@@ -65,15 +65,9 @@ class MessageBubble extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
-                    if (isMe && showReadReceipt) ...[
+                    if (isMe) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        message.readAt != null ? Icons.done_all : Icons.done,
-                        size: 14,
-                        color: message.readAt != null
-                            ? Colors.lightBlueAccent
-                            : Colors.white70,
-                      ),
+                      _buildStatusIcon(),
                     ],
                   ],
                 ),
@@ -83,6 +77,19 @@ class MessageBubble extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildStatusIcon() {
+    if (message.readAt != null) {
+      // Read — double blue ticks
+      return const Icon(Icons.done_all, size: 14, color: _whatsappBlue);
+    } else if (message.deliveredAt != null) {
+      // Delivered — double grey ticks
+      return const Icon(Icons.done_all, size: 14, color: Colors.white54);
+    } else {
+      // Sent — single grey tick
+      return const Icon(Icons.done, size: 14, color: Colors.white54);
+    }
   }
 
   Widget _buildSystemMessage() {

@@ -290,6 +290,7 @@ class MessageResponse(BaseModel):
     sender_uid: str
     content: str
     sent_at: datetime
+    delivered_at: Optional[datetime] = None
     read_at: Optional[datetime] = None
     read_by: List[str] = Field(default_factory=list)
     type: MessageType = MessageType.text

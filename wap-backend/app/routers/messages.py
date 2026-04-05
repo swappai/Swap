@@ -164,6 +164,17 @@ def get_messages(
 
     messages = cosmos.get_messages(conversation_id, limit=limit, before=before)
 
+    # Auto-mark messages from other senders as delivered when this user fetches them
+    now = datetime.utcnow().isoformat()
+    for m in messages:
+        if m.get("sender_uid") != uid and not m.get("delivered_at"):
+            cosmos.update_message(
+                conversation_id=conversation_id,
+                message_id=m["id"],
+                data={"delivered_at": now},
+            )
+            m["delivered_at"] = now
+
     return [
         MessageResponse(
             id=m["id"],
@@ -171,6 +182,7 @@ def get_messages(
             sender_uid=m.get("sender_uid", ""),
             content=m.get("content", ""),
             sent_at=_convert_timestamp(m.get("sent_at")) or datetime.utcnow().isoformat(),
+            delivered_at=_convert_timestamp(m.get("delivered_at")),
             read_at=_convert_timestamp(m.get("read_at")),
             read_by=m.get("read_by", []),
             type=MessageType(m.get("type", "text")),
@@ -222,6 +234,7 @@ def send_message(
             "sender_uid": uid,
             "content": message.content,
             "sent_at": now,
+            "delivered_at": None,
             "read_at": None,
             "read_by": [uid],
             "type": MessageType.text.value,
@@ -287,6 +300,7 @@ def send_message(
         sender_uid=uid,
         content=message.content,
         sent_at=now,
+        delivered_at=None,
         read_at=None,
         read_by=[uid],
         type=MessageType.text,

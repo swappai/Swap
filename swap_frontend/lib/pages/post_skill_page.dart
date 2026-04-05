@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
 import 'home_page.dart';
@@ -13,11 +12,8 @@ const Color _card = Color(0xFF16171C);
 const Color _border = Color(0xFF232530);
 const Color _borderFocus = Color(0xFF6D5BF7);
 const Color _accent = Color(0xFF6D5BF7);
-const Color _accentGlow = Color(0xFF8B7AFF);
 const Color _accentSoft = Color(0xFF2A2350);
-const Color _teal = Color(0xFF34D399);
-const Color _amber = Color(0xFFD97706);
-const Color _rose = Color(0xFFF43F5E);
+const Color _textSuccess = Color(0xFF6EE7B7);
 const Color _textPrimary = Color(0xFFF0F0F8);
 const Color _textSecondary = Color(0xFF9CA3AF);
 const Color _textDim = Color(0xFF6B7280);
@@ -31,8 +27,7 @@ class PostSkillPage extends StatefulWidget {
   State<PostSkillPage> createState() => _PostSkillPageState();
 }
 
-class _PostSkillPageState extends State<PostSkillPage>
-    with TickerProviderStateMixin {
+class _PostSkillPageState extends State<PostSkillPage> {
   final _formKey = GlobalKey<FormState>();
   bool _publishing = false;
   int _step = 0; // 0 = essentials, 1 = details, 2 = review
@@ -48,9 +43,6 @@ class _PostSkillPageState extends State<PostSkillPage>
   String _delivery = 'Remote Only';
   final List<String> _tags = [];
   final List<String> _deliverables = [];
-
-  late final AnimationController _pulseCtrl;
-  late final Animation<double> _pulse;
 
   static const _categories = [
     ('Design', Icons.brush_outlined, Color(0xFFE879F9)),
@@ -70,13 +62,6 @@ class _PostSkillPageState extends State<PostSkillPage>
   @override
   void initState() {
     super.initState();
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 2000),
-    )..repeat(reverse: true);
-    _pulse = Tween<double>(begin: 0.4, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
 
     final skill = widget.existingSkill;
     if (skill != null) {
@@ -98,7 +83,6 @@ class _PostSkillPageState extends State<PostSkillPage>
     _hoursCtrl.dispose();
     _tagCtrl.dispose();
     _deliverableCtrl.dispose();
-    _pulseCtrl.dispose();
     super.dispose();
   }
 
@@ -181,7 +165,7 @@ class _PostSkillPageState extends State<PostSkillPage>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(_isEditing ? 'Skill updated!' : 'Skill posted!'),
-          backgroundColor: _teal,
+          backgroundColor: _accent,
         ),
       );
       await Future.delayed(const Duration(milliseconds: 500));
@@ -275,28 +259,6 @@ class _PostSkillPageState extends State<PostSkillPage>
   Widget _buildHeader() {
     return Row(
       children: [
-        // Decorative icon
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF6D5BF7), Color(0xFF9F67FF)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: _accent.withValues(alpha: 0.3),
-                blurRadius: 16,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: const Icon(HugeIcons.strokeRoundedQuillWrite01, color: Colors.white, size: 24),
-        ),
-        const SizedBox(width: 16),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -305,22 +267,28 @@ class _PostSkillPageState extends State<PostSkillPage>
                 _isEditing ? 'Edit Your Skill' : 'Create a Skill Listing',
                 style: const TextStyle(
                   color: _textPrimary,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w800,
+                  fontSize: 30,
+                  fontWeight: FontWeight.w700,
                   letterSpacing: -0.5,
                   height: 1.1,
                 ),
               ),
-              const SizedBox(height: 4),
+              const SizedBox(height: 6),
               const Text(
                 'Share what you know, learn what you need',
-                style: TextStyle(color: _textSecondary, fontSize: 14),
+                style: TextStyle(color: _textSecondary, fontSize: 15),
               ),
             ],
           ),
         ),
-        // Completion ring
-        _CompletionRing(percent: _completionPercent, pulse: _pulse),
+        Text(
+          'Step ${_step + 1} of 3',
+          style: const TextStyle(
+            color: _textSecondary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }
@@ -335,12 +303,9 @@ class _PostSkillPageState extends State<PostSkillPage>
           if (i > 0)
             Expanded(
               child: Container(
-                height: 2,
-                margin: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(1),
-                  color: i <= _step ? _accent : _border,
-                ),
+                height: 1,
+                margin: const EdgeInsets.only(bottom: 20),
+                color: i <= _step ? _accent : _border,
               ),
             ),
           GestureDetector(
@@ -351,64 +316,43 @@ class _PostSkillPageState extends State<PostSkillPage>
             },
             child: MouseRegion(
               cursor: SystemMouseCursors.click,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOut,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                decoration: BoxDecoration(
-                  color: i == _step ? _accentSoft : _surface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: i == _step
-                        ? _accent.withValues(alpha: 0.6)
-                        : i < _step
-                            ? _teal.withValues(alpha: 0.3)
-                            : _border,
-                    width: i == _step ? 1.5 : 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 250),
-                      width: 24,
-                      height: 24,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: i < _step
-                            ? _teal
-                            : i == _step
-                                ? _accent
-                                : _card,
-                        border: Border.all(
-                          color: i <= _step ? Colors.transparent : _border,
-                        ),
-                      ),
-                      child: Center(
-                        child: i < _step
-                            ? const Icon(Icons.check_rounded, size: 14, color: Colors.white)
-                            : Text(
-                                '${i + 1}',
-                                style: TextStyle(
-                                  color: i == _step ? Colors.white : _textDim,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                ),
+              child: Column(
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 250),
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: i < _step
+                          ? _accent
+                          : i == _step
+                              ? _accent
+                              : _border,
+                    ),
+                    child: Center(
+                      child: i < _step
+                          ? const Icon(Icons.check_rounded, size: 12, color: Colors.white)
+                          : Text(
+                              '${i + 1}',
+                              style: TextStyle(
+                                color: i == _step ? Colors.white : _textDim,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
                               ),
-                      ),
+                            ),
                     ),
-                    const SizedBox(width: 8),
-                    Text(
-                      labels[i],
-                      style: TextStyle(
-                        color: i <= _step ? _textPrimary : _textDim,
-                        fontSize: 13,
-                        fontWeight: i == _step ? FontWeight.w700 : FontWeight.w500,
-                      ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    labels[i],
+                    style: TextStyle(
+                      color: i <= _step ? _textPrimary : _textDim,
+                      fontSize: 12,
+                      fontWeight: i == _step ? FontWeight.w700 : FontWeight.w500,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -472,7 +416,7 @@ class _PostSkillPageState extends State<PostSkillPage>
                     '${_descCtrl.text.length} / 2000',
                     style: TextStyle(
                       color: _descCtrl.text.length > 1800
-                          ? _rose
+                          ? _accent
                           : _textDim,
                       fontSize: 12,
                     ),
@@ -504,49 +448,56 @@ class _PostSkillPageState extends State<PostSkillPage>
   }
 
   Widget _buildCategoryGrid() {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: _categories.map((cat) {
-        final selected = _category == cat.$1;
-        return GestureDetector(
-          onTap: () => setState(() => _category = cat.$1),
-          child: MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: selected
-                    ? cat.$3.withValues(alpha: 0.12)
-                    : _card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: selected
-                      ? cat.$3.withValues(alpha: 0.5)
-                      : _border,
-                  width: selected ? 1.5 : 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(cat.$2, size: 18, color: selected ? cat.$3 : _textDim),
-                  const SizedBox(width: 8),
-                  Text(
-                    cat.$1,
-                    style: TextStyle(
-                      color: selected ? cat.$3 : _textSecondary,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      fontSize: 13,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final itemWidth = (constraints.maxWidth - 12) / 2;
+        return Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: _categories.map((cat) {
+            final selected = _category == cat.$1;
+            return GestureDetector(
+              onTap: () => setState(() => _category = cat.$1),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  width: itemWidth,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                  decoration: BoxDecoration(
+                    color: selected ? _accentSoft : _card,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border(
+                      left: BorderSide(
+                        color: selected ? _accent : Colors.transparent,
+                        width: 3,
+                      ),
+                      bottom: BorderSide(
+                        color: selected ? Colors.transparent : _border,
+                        width: 1,
+                      ),
                     ),
                   ),
-                ],
+                  child: Row(
+                    children: [
+                      Icon(cat.$2, size: 18, color: selected ? _textPrimary : _textDim),
+                      const SizedBox(width: 10),
+                      Text(
+                        cat.$1,
+                        style: TextStyle(
+                          color: selected ? _textPrimary : _textSecondary,
+                          fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
@@ -566,11 +517,6 @@ class _PostSkillPageState extends State<PostSkillPage>
               Row(
                 children: _levels.map((level) {
                   final selected = _difficulty == level;
-                  final color = level == 'Beginner'
-                      ? _teal
-                      : level == 'Intermediate'
-                          ? _amber
-                          : _rose;
                   return Expanded(
                     child: Padding(
                       padding: EdgeInsets.only(
@@ -584,45 +530,31 @@ class _PostSkillPageState extends State<PostSkillPage>
                             duration: const Duration(milliseconds: 200),
                             padding: const EdgeInsets.symmetric(vertical: 14),
                             decoration: BoxDecoration(
-                              color: selected
-                                  ? color.withValues(alpha: 0.1)
-                                  : _card,
+                              color: _card,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: selected
-                                    ? color.withValues(alpha: 0.5)
-                                    : _border,
-                                width: selected ? 1.5 : 1,
+                                color: selected ? Colors.transparent : _border,
+                                width: 1,
                               ),
                             ),
                             child: Column(
                               children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                    level == 'Beginner'
-                                        ? 1
-                                        : level == 'Intermediate'
-                                            ? 2
-                                            : 3,
-                                    (_) => Container(
-                                      width: 6,
-                                      height: 6,
-                                      margin: const EdgeInsets.symmetric(horizontal: 2),
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: selected ? color : _textDim,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
                                 Text(
                                   level,
                                   style: TextStyle(
-                                    color: selected ? color : _textSecondary,
+                                    color: selected ? _textPrimary : _textSecondary,
                                     fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                                     fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 2,
+                                  width: selected ? 24 : 0,
+                                  decoration: BoxDecoration(
+                                    color: _accent,
+                                    borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
                               ],
@@ -739,16 +671,9 @@ class _PostSkillPageState extends State<PostSkillPage>
                     ),
                     child: Row(
                       children: [
-                        Container(
-                          width: 22,
-                          height: 22,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: _teal.withValues(alpha: 0.15),
-                          ),
-                          child: Center(
-                            child: Icon(Icons.check_rounded, size: 13, color: _teal),
-                          ),
+                        Text(
+                          '\u2014',
+                          style: const TextStyle(color: _textDim, fontSize: 14, fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(width: 10),
                         Expanded(
@@ -792,148 +717,158 @@ class _PostSkillPageState extends State<PostSkillPage>
       key: const ValueKey('step2'),
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Live preview card — the hero moment
-        _SectionShell(
-          gradient: LinearGradient(
-            colors: [
-              catEntry.$3.withValues(alpha: 0.06),
-              _surface,
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+        // Live preview card
+        Container(
+          decoration: BoxDecoration(
+            color: _surface,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _border),
           ),
+          clipBehavior: Clip.antiAlias,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.visibility_outlined, size: 18, color: _textDim),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Preview — how others will see your listing',
-                    style: TextStyle(color: _textDim, fontSize: 13),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Title row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(
-                      _titleCtrl.text.isEmpty ? 'Untitled Skill' : _titleCtrl.text,
-                      style: const TextStyle(
-                        color: _textPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.3,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: catEntry.$3.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: catEntry.$3.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+              // Accent bar at top
+              Container(height: 3, color: _accent),
+              Padding(
+                padding: const EdgeInsets.all(28),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
                       children: [
-                        Icon(catEntry.$2, size: 14, color: catEntry.$3),
-                        const SizedBox(width: 4),
-                        Text(
-                          _category ?? 'Category',
-                          style: TextStyle(
-                            color: catEntry.$3,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                        Icon(Icons.visibility_outlined, size: 18, color: _textDim),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Preview \u2014 how others will see your listing',
+                          style: TextStyle(color: _textDim, fontSize: 13),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 14),
-              // Metadata pills
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  _previewPill(Icons.signal_cellular_alt_rounded, _difficulty ?? 'Level'),
-                  _previewPill(Icons.schedule_rounded, '${_hoursCtrl.text}h'),
-                  _previewPill(Icons.language_rounded, _delivery),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Description
-              Text(
-                _descCtrl.text.isEmpty
-                    ? 'Your description will appear here...'
-                    : _descCtrl.text,
-                style: TextStyle(
-                  color: _descCtrl.text.isEmpty ? _textDim : _textSecondary,
-                  fontSize: 14,
-                  height: 1.6,
-                ),
-                maxLines: 6,
-                overflow: TextOverflow.ellipsis,
-              ),
-              if (_tags.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: _tags.map((t) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: _card,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(color: _border),
-                      ),
-                      child: Text(t, style: const TextStyle(color: _textSecondary, fontSize: 12)),
-                    );
-                  }).toList(),
-                ),
-              ],
-              if (_deliverables.isNotEmpty) ...[
-                const SizedBox(height: 18),
-                const Text(
-                  'DELIVERABLES',
-                  style: TextStyle(
-                    color: _textDim,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...List.generate(_deliverables.length, (i) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: Row(
+                    const SizedBox(height: 20),
+                    // Title row
+                    Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.only(top: 3),
-                          child: Icon(Icons.check_circle_rounded, size: 14, color: _teal),
-                        ),
-                        const SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            _deliverables[i],
-                            style: const TextStyle(color: _textPrimary, fontSize: 13, height: 1.4),
+                            _titleCtrl.text.isEmpty ? 'Untitled Skill' : _titleCtrl.text,
+                            style: const TextStyle(
+                              color: _textPrimary,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.3,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: catEntry.$3.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: catEntry.$3.withValues(alpha: 0.3)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(catEntry.$2, size: 14, color: catEntry.$3),
+                              const SizedBox(width: 4),
+                              Text(
+                                _category ?? 'Category',
+                                style: TextStyle(
+                                  color: catEntry.$3,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
-                  );
-                }),
-              ],
+                    const SizedBox(height: 20),
+                    // Metadata pills
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _previewPill(Icons.signal_cellular_alt_rounded, _difficulty ?? 'Level'),
+                        _previewPill(Icons.schedule_rounded, '${_hoursCtrl.text}h'),
+                        _previewPill(Icons.language_rounded, _delivery),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
+                    // Description
+                    Text(
+                      _descCtrl.text.isEmpty
+                          ? 'Your description will appear here...'
+                          : _descCtrl.text,
+                      style: TextStyle(
+                        color: _descCtrl.text.isEmpty ? _textDim : _textSecondary,
+                        fontSize: 14,
+                        height: 1.6,
+                      ),
+                      maxLines: 6,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (_tags.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _tags.map((t) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                            decoration: BoxDecoration(
+                              color: _card,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(color: _border),
+                            ),
+                            child: Text(t, style: const TextStyle(color: _textSecondary, fontSize: 12)),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                    if (_deliverables.isNotEmpty) ...[
+                      const SizedBox(height: 20),
+                      const Text(
+                        'DELIVERABLES',
+                        style: TextStyle(
+                          color: _textDim,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...List.generate(_deliverables.length, (i) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Padding(
+                                padding: EdgeInsets.only(top: 1),
+                                child: Text(
+                                  '\u2014 ',
+                                  style: TextStyle(color: _textDim, fontSize: 13, fontWeight: FontWeight.w700),
+                                ),
+                              ),
+                              Expanded(
+                                child: Text(
+                                  _deliverables[i],
+                                  style: const TextStyle(color: _textPrimary, fontSize: 13, height: 1.4),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -1030,10 +965,8 @@ class _PostSkillPageState extends State<PostSkillPage>
                     '$_completionPercent%',
                     style: TextStyle(
                       color: _completionPercent >= 80
-                          ? _teal
-                          : _completionPercent >= 50
-                              ? _amber
-                              : _textDim,
+                          ? _textPrimary
+                          : _textSecondary,
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
                     ),
@@ -1047,13 +980,7 @@ class _PostSkillPageState extends State<PostSkillPage>
                   value: _completionPercent / 100,
                   minHeight: 6,
                   backgroundColor: _card,
-                  valueColor: AlwaysStoppedAnimation(
-                    _completionPercent >= 80
-                        ? _teal
-                        : _completionPercent >= 50
-                            ? _amber
-                            : _accent,
-                  ),
+                  valueColor: const AlwaysStoppedAnimation(_accent),
                 ),
               ),
               const SizedBox(height: 14),
@@ -1072,33 +999,19 @@ class _PostSkillPageState extends State<PostSkillPage>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      color: _amber.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(Icons.lightbulb_outline_rounded, size: 16, color: _amber),
-                  ),
-                  const SizedBox(width: 10),
-                  const Text(
-                    'Tips for Success',
-                    style: TextStyle(
-                      color: _textPrimary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+              const Text(
+                'Tips for Success',
+                style: TextStyle(
+                  color: _textPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
               ),
               const SizedBox(height: 14),
-              _tipItem('Be specific about outcomes — "you\'ll build a portfolio site" beats "learn web dev"'),
+              _tipItem('Be specific about outcomes \u2014 "you\'ll build a portfolio site" beats "learn web dev"'),
               _tipItem('Mention your experience level so people know what to expect'),
               _tipItem('Realistic hour estimates build trust'),
-              _tipItem('Tags are how people find you — use 3-5 relevant ones'),
+              _tipItem('Tags are how people find you \u2014 use 3-5 relevant ones'),
             ],
           ),
         ),
@@ -1116,38 +1029,27 @@ class _PostSkillPageState extends State<PostSkillPage>
     return Row(
       children: [
         if (onBack != null)
-          OutlinedButton.icon(
+          TextButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back_rounded, size: 16),
-            label: const Text('Back'),
-            style: OutlinedButton.styleFrom(
+            style: TextButton.styleFrom(
               foregroundColor: _textSecondary,
-              side: const BorderSide(color: _border),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             ),
+            child: const Text('Back', style: TextStyle(fontWeight: FontWeight.w600)),
           ),
         const Spacer(),
         if (showNext)
-          FilledButton.icon(
+          FilledButton(
             onPressed: onNext,
-            icon: const Text(''),
-            label: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text('Continue', style: TextStyle(fontWeight: FontWeight.w700)),
-                SizedBox(width: 4),
-                Icon(Icons.arrow_forward_rounded, size: 16),
-              ],
-            ),
             style: FilledButton.styleFrom(
               backgroundColor: onNext != null ? _accent : _card,
               foregroundColor: Colors.white,
               disabledBackgroundColor: _card,
               disabledForegroundColor: _textDim,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
+            child: const Text('Continue', style: TextStyle(fontWeight: FontWeight.w700)),
           ),
       ],
     );
@@ -1167,7 +1069,7 @@ class _PostSkillPageState extends State<PostSkillPage>
           ),
         ),
         if (required)
-          const Text(' *', style: TextStyle(color: _rose, fontWeight: FontWeight.w700)),
+          const Text(' *', style: TextStyle(color: _accent, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -1267,21 +1169,21 @@ class _PostSkillPageState extends State<PostSkillPage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: _accent.withValues(alpha: 0.1),
+        color: _card,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: _accent.withValues(alpha: 0.25)),
+        border: Border.all(color: _border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             tag,
-            style: const TextStyle(color: _accentGlow, fontSize: 12, fontWeight: FontWeight.w600),
+            style: const TextStyle(color: _textSecondary, fontSize: 12, fontWeight: FontWeight.w600),
           ),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: () => setState(() => _tags.remove(tag)),
-            child: Icon(Icons.close_rounded, size: 14, color: _accentGlow.withValues(alpha: 0.6)),
+            child: Icon(Icons.close_rounded, size: 14, color: _textDim),
           ),
         ],
       ),
@@ -1301,7 +1203,7 @@ class _PostSkillPageState extends State<PostSkillPage>
         children: [
           Icon(icon, size: 14, color: _textDim),
           const SizedBox(width: 5),
-          Text(text, style: const TextStyle(color: _textSecondary, fontSize: 12)),
+          Text(text, style: const TextStyle(color: _textDim, fontSize: 12)),
         ],
       ),
     );
@@ -1315,7 +1217,7 @@ class _PostSkillPageState extends State<PostSkillPage>
           Icon(
             done ? Icons.check_circle_rounded : Icons.radio_button_unchecked_rounded,
             size: 16,
-            color: done ? _teal : _textDim,
+            color: done ? _textSuccess : _textDim,
           ),
           const SizedBox(width: 8),
           Text(
@@ -1323,8 +1225,6 @@ class _PostSkillPageState extends State<PostSkillPage>
             style: TextStyle(
               color: done ? _textPrimary : _textDim,
               fontSize: 13,
-              decoration: done ? TextDecoration.lineThrough : null,
-              decorationColor: _textDim,
             ),
           ),
         ],
@@ -1338,11 +1238,10 @@ class _PostSkillPageState extends State<PostSkillPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(top: 4),
-            child: Icon(Icons.arrow_right_rounded, size: 16, color: _amber),
+          const Text(
+            '\u2014 ',
+            style: TextStyle(color: _textDim, fontSize: 13, fontWeight: FontWeight.w700),
           ),
-          const SizedBox(width: 6),
           Expanded(
             child: Text(
               text,
@@ -1358,71 +1257,19 @@ class _PostSkillPageState extends State<PostSkillPage>
 // ─── Section Shell ────────────────────────────────────────────────────────────
 
 class _SectionShell extends StatelessWidget {
-  const _SectionShell({required this.child, this.gradient});
+  const _SectionShell({required this.child});
   final Widget child;
-  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        gradient: gradient,
-        color: gradient == null ? _surface : null,
-        borderRadius: BorderRadius.circular(16),
+        color: _surface,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _border),
       ),
       child: child,
-    );
-  }
-}
-
-// ─── Animated Completion Ring ─────────────────────────────────────────────────
-
-class _CompletionRing extends StatelessWidget {
-  const _CompletionRing({required this.percent, required this.pulse});
-  final int percent;
-  final Animation<double> pulse;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: pulse,
-      builder: (context, child) {
-        return SizedBox(
-          width: 56,
-          height: 56,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 56,
-                height: 56,
-                child: CircularProgressIndicator(
-                  value: percent / 100,
-                  strokeWidth: 4,
-                  backgroundColor: _border,
-                  valueColor: AlwaysStoppedAnimation(
-                    percent >= 80
-                        ? _teal
-                        : percent >= 50
-                            ? _amber
-                            : _accent,
-                  ),
-                ),
-              ),
-              Text(
-                '$percent',
-                style: TextStyle(
-                  color: _textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

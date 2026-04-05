@@ -832,12 +832,10 @@ class _ChatPageState extends State<ChatPage> {
       itemBuilder: (context, i) {
         final message = _messages[i];
         final isMe = message.senderUid == _currentUid;
-        final isLast = i == _messages.length - 1;
 
         return MessageBubble(
           message: message,
           isMe: isMe,
-          showReadReceipt: isMe && isLast,
         );
       },
     );

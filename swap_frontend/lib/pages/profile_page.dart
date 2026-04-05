@@ -20,12 +20,24 @@ import 'onboarding.dart';
 import 'edit_profile_page.dart';
 import 'messages/chat_page.dart';
 
+// Restrained palette — 5 muted category tones
+const _catPurple = Color(0xFFA78BFA); // Design/Writing/Photo
+const _catBlue   = Color(0xFF7DD3FC); // Dev/Business/Marketing
+const _catRose   = Color(0xFFFCA5A5); // Music/Language
+const _catGreen  = Color(0xFF6EE7B7); // Tutoring/Fitness
+const _catAmber  = Color(0xFFFCD34D); // Other/Cooking
+
+const _textPrimary   = HomePage.textPrimary;
+const _textSecondary = Color(0xFF9CA3AF);
+const _textMuted     = HomePage.textMuted;
+const _accent        = HomePage.accent;
+const _line          = HomePage.line;
+
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key, this.uid});
 
   /// If null, shows the current user's profile. If set, shows another user's profile.
   final String? uid;
-
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -129,7 +141,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   final joinedAt = DateTime.tryParse(data['created_at'] ?? '');
 
                   return SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                    padding: const EdgeInsets.fromLTRB(28, 20, 28, 32),
                     child: Center(
                       child: ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 960),
@@ -147,7 +159,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     icon: const Icon(HugeIcons.strokeRoundedArrowLeft01, size: 18),
                                     label: const Text('Back'),
                                     style: TextButton.styleFrom(
-                                      foregroundColor: HomePage.textMuted,
+                                      foregroundColor: _textMuted,
                                     ),
                                   ),
                                 ),
@@ -192,47 +204,17 @@ class _ProfilePageState extends State<ProfilePage> {
                                   : null,
                             ),
 
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
 
-                            // ===== STATS ROW =====
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final narrow = constraints.maxWidth < 600;
-                                final stats = [
-                                  _StatData(HugeIcons.strokeRoundedExchange01, 'Total Swaps', '$swapsCompleted', const Color(0xFF7C3AED)),
-                                  _StatData(HugeIcons.strokeRoundedStar, 'Avg Rating', averageRating > 0 ? averageRating.toStringAsFixed(1) : '-', const Color(0xFFF59E0B)),
-                                  _StatData(HugeIcons.strokeRoundedCoins01, 'Credits', '$swapCredits', const Color(0xFF22C55E)),
-                                  _StatData(HugeIcons.strokeRoundedCalendar03, 'Member Since', joinedAt != null ? _formatMonthYear(joinedAt) : 'Recently', const Color(0xFF60A5FA)),
-                                ];
-                                if (narrow) {
-                                  return Column(
-                                    children: [
-                                      Row(children: [
-                                        Expanded(child: _GlassStatCard(data: stats[0])),
-                                        const SizedBox(width: 10),
-                                        Expanded(child: _GlassStatCard(data: stats[1])),
-                                      ]),
-                                      const SizedBox(height: 10),
-                                      Row(children: [
-                                        Expanded(child: _GlassStatCard(data: stats[2])),
-                                        const SizedBox(width: 10),
-                                        Expanded(child: _GlassStatCard(data: stats[3])),
-                                      ]),
-                                    ],
-                                  );
-                                }
-                                return Row(
-                                  children: [
-                                    for (int i = 0; i < stats.length; i++) ...[
-                                      Expanded(child: _GlassStatCard(data: stats[i])),
-                                      if (i < stats.length - 1) const SizedBox(width: 10),
-                                    ],
-                                  ],
-                                );
-                              },
+                            // ===== STATS ROW (inline text) =====
+                            _InlineStats(
+                              swapsCompleted: swapsCompleted,
+                              averageRating: averageRating,
+                              swapCredits: swapCredits,
+                              joinedAt: joinedAt,
                             ),
 
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 28),
 
                             // ===== TABS =====
                             _SegmentedTabs(
@@ -304,216 +286,136 @@ class _HeroSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
+      padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: HomePage.line),
+        color: HomePage.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _line),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Cover
-          Container(
-            height: 140,
-            width: double.infinity,
-            decoration: const BoxDecoration(
-              color: Color(0xFF7C3AED),
-            ),
+          // Avatar (left)
+          GestureDetector(
+            onTap: onEditPhoto,
             child: Stack(
               children: [
-                // Action buttons in top right of gradient
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Row(
-                    children: [
-                      if (isOwnProfile && onEdit != null)
-                        _GlassActionButton(
-                          icon: HugeIcons.strokeRoundedPencilEdit01,
-                          label: 'Edit Profile',
-                          onTap: onEdit!,
-                        ),
-                      if (isOwnProfile && onSettings != null) ...[
-                        const SizedBox(width: 8),
-                        _GlassActionButton(
-                          icon: HugeIcons.strokeRoundedSettings01,
-                          label: 'Settings',
-                          onTap: onSettings!,
-                        ),
-                      ],
-                      if (!isOwnProfile && onMessage != null)
-                        _GlassActionButton(
-                          icon: HugeIcons.strokeRoundedMessage01,
-                          label: 'Message',
-                          onTap: onMessage!,
-                          accent: true,
-                        ),
-                    ],
-                  ),
+                FutureBuilder<String?>(
+                  future: _resolvePhotoUrl(photoUrl),
+                  builder: (context, snap) {
+                    final url = snap.data;
+                    return CircleAvatar(
+                      radius: 56,
+                      backgroundColor: HomePage.surfaceAlt,
+                      foregroundImage: (url != null && url.isNotEmpty)
+                          ? NetworkImage(url)
+                          : null,
+                      child: (url == null || url.isEmpty)
+                          ? Text(
+                              name.isNotEmpty
+                                  ? name.characters.first.toUpperCase()
+                                  : 'U',
+                              style: const TextStyle(
+                                color: _textPrimary,
+                                fontSize: 34,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            )
+                          : null,
+                    );
+                  },
                 ),
-              ],
-            ),
-          ),
-
-          // Profile info area
-          Container(
-            color: HomePage.surface,
-            padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
-            child: Column(
-              children: [
-                // Avatar row - overlapping the gradient
-                Transform.translate(
-                  offset: const Offset(0, -40),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Avatar
-                      GestureDetector(
-                        onTap: onEditPhoto,
-                        child: Stack(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: HomePage.surface,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.3),
-                                    blurRadius: 16,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Container(
-                                padding: const EdgeInsets.all(3),
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Color(0xFF7C3AED),
-                                ),
-                                child: FutureBuilder<String?>(
-                                  future: _resolvePhotoUrl(photoUrl),
-                                  builder: (context, snap) {
-                                    final url = snap.data;
-                                    return CircleAvatar(
-                                      radius: 48,
-                                      backgroundColor: HomePage.surfaceAlt,
-                                      foregroundImage: (url != null && url.isNotEmpty)
-                                          ? NetworkImage(url)
-                                          : null,
-                                      child: (url == null || url.isEmpty)
-                                          ? Text(
-                                              name.isNotEmpty
-                                                  ? name.characters.first.toUpperCase()
-                                                  : 'U',
-                                              style: const TextStyle(
-                                                color: HomePage.textPrimary,
-                                                fontSize: 34,
-                                                fontWeight: FontWeight.w700,
-                                              ),
-                                            )
-                                          : null,
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                            if (onEditPhoto != null)
-                              Positioned(
-                                right: 2,
-                                bottom: 2,
-                                child: Container(
-                                  padding: const EdgeInsets.all(7),
-                                  decoration: BoxDecoration(
-                                    color: HomePage.accent,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: HomePage.surface, width: 3),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: HomePage.accent.withValues(alpha: 0.4),
-                                        blurRadius: 8,
-                                      ),
-                                    ],
-                                  ),
-                                  child: const Icon(HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 20),
-                      // Name + meta info
-                      Expanded(
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 4),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      name,
-                                      style: const TextStyle(
-                                        color: HomePage.textPrimary,
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ),
-                                  if (accountType.isNotEmpty) ...[
-                                    const SizedBox(width: 10),
-                                    _AccountTypeBadge(type: accountType),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Wrap(
-                                spacing: 14,
-                                runSpacing: 6,
-                                children: [
-                                  if (username.isNotEmpty)
-                                    _MetaChip(icon: HugeIcons.strokeRoundedUser, text: '@$username'),
-                                  if (city.isNotEmpty)
-                                    _MetaChip(icon: HugeIcons.strokeRoundedLocation01, text: city),
-                                  if (joinedAt != null)
-                                    _MetaChip(icon: HugeIcons.strokeRoundedCalendar03, text: 'Joined ${_formatMonthYear(joinedAt!)}'),
-                                  StarRating(rating: averageRating, count: reviewCount, compact: true),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Bio (shifted up to account for the transform)
-                if (bio.isNotEmpty)
-                  Transform.translate(
-                    offset: const Offset(0, -20),
+                if (onEditPhoto != null)
+                  Positioned(
+                    right: 0,
+                    bottom: 0,
                     child: Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
+                      padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: HomePage.bg,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: HomePage.line),
+                        color: _accent,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: HomePage.surface, width: 2),
                       ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Icon(HugeIcons.strokeRoundedQuoteDown, size: 18, color: HomePage.accentAlt),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(bio, style: const TextStyle(color: HomePage.textPrimary, fontSize: 14, height: 1.5)),
-                          ),
-                        ],
-                      ),
+                      child: const Icon(HugeIcons.strokeRoundedCamera01, size: 14, color: Colors.white),
                     ),
                   ),
               ],
             ),
+          ),
+          const SizedBox(width: 24),
+          // Name / meta (center)
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        name,
+                        style: const TextStyle(
+                          color: _textPrimary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (accountType.isNotEmpty) ...[
+                      const SizedBox(width: 10),
+                      _AccountTypeBadge(type: accountType),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 6,
+                  children: [
+                    if (username.isNotEmpty)
+                      _MetaChip(icon: HugeIcons.strokeRoundedUser, text: '@$username'),
+                    if (city.isNotEmpty)
+                      _MetaChip(icon: HugeIcons.strokeRoundedLocation01, text: city),
+                    if (joinedAt != null)
+                      _MetaChip(icon: HugeIcons.strokeRoundedCalendar03, text: 'Joined ${_formatMonthYear(joinedAt!)}'),
+                    StarRating(rating: averageRating, count: reviewCount, compact: true),
+                  ],
+                ),
+                if (bio.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    bio,
+                    style: const TextStyle(color: _textSecondary, fontSize: 15, height: 1.5),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          // Actions (far-right)
+          const SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (isOwnProfile && onEdit != null)
+                TextButton(
+                  onPressed: onEdit,
+                  style: TextButton.styleFrom(foregroundColor: _textMuted),
+                  child: const Text('Edit Profile'),
+                ),
+              if (isOwnProfile && onSettings != null)
+                TextButton(
+                  onPressed: onSettings,
+                  style: TextButton.styleFrom(foregroundColor: _textMuted),
+                  child: const Text('Settings'),
+                ),
+              if (!isOwnProfile && onMessage != null)
+                TextButton(
+                  onPressed: onMessage,
+                  style: TextButton.styleFrom(foregroundColor: HomePage.accentAlt),
+                  child: const Text('Message'),
+                ),
+            ],
           ),
         ],
       ),
@@ -523,44 +425,6 @@ class _HeroSection extends StatelessWidget {
   static Future<String?> _resolvePhotoUrl(String? raw) async {
     if (raw == null || raw.isEmpty) return null;
     return raw;
-  }
-}
-
-class _GlassActionButton extends StatelessWidget {
-  const _GlassActionButton({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    this.accent = false,
-  });
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-  final bool accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: accent
-          ? HomePage.accent.withValues(alpha: 0.9)
-          : Colors.white.withValues(alpha: 0.15),
-      borderRadius: BorderRadius.circular(10),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(10),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 16, color: Colors.white),
-              const SizedBox(width: 6),
-              Text(label, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -574,9 +438,9 @@ class _AccountTypeBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: (isBusiness ? const Color(0xFF22C55E) : HomePage.accent).withValues(alpha: 0.15),
+        color: (isBusiness ? const Color(0xFF22C55E) : _accent).withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: (isBusiness ? const Color(0xFF22C55E) : HomePage.accent).withValues(alpha: 0.3)),
+        border: Border.all(color: (isBusiness ? const Color(0xFF22C55E) : _accent).withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -611,79 +475,88 @@ class _MetaChip extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: HomePage.textMuted),
+        Icon(icon, size: 14, color: _textMuted),
         const SizedBox(width: 5),
-        Text(text, style: const TextStyle(color: HomePage.textMuted, fontSize: 13)),
+        Text(text, style: const TextStyle(color: _textMuted, fontSize: 13)),
       ],
     );
   }
 }
 
-/* ========================== GLASS STAT CARD ========================== */
+/* ========================== INLINE STATS ========================== */
 
-class _StatData {
-  const _StatData(this.icon, this.label, this.value, this.color);
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-}
-
-class _GlassStatCard extends StatelessWidget {
-  const _GlassStatCard({required this.data});
-  final _StatData data;
+class _InlineStats extends StatelessWidget {
+  const _InlineStats({
+    required this.swapsCompleted,
+    required this.averageRating,
+    required this.swapCredits,
+    required this.joinedAt,
+  });
+  final int swapsCompleted;
+  final double averageRating;
+  final int swapCredits;
+  final DateTime? joinedAt;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        color: HomePage.surface,
-        border: Border.all(color: HomePage.line),
+    final items = <_InlineStatItem>[
+      _InlineStatItem('$swapsCompleted', 'Swaps'),
+      _InlineStatItem(
+        averageRating > 0 ? averageRating.toStringAsFixed(1) : '-',
+        'Rating',
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              color: data.color.withValues(alpha: 0.12),
-              border: Border.all(color: data.color.withValues(alpha: 0.2)),
-            ),
-            child: Icon(data.icon, color: data.color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      _InlineStatItem('$swapCredits', 'Credits'),
+      _InlineStatItem(
+        joinedAt != null ? _formatMonthYear(joinedAt!) : 'Recently',
+        'Joined',
+      ),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 4,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        for (int i = 0; i < items.length; i++) ...[
+          RichText(
+            text: TextSpan(
               children: [
-                Text(
-                  data.value,
-                  style: TextStyle(
-                    color: data.color,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800,
+                TextSpan(
+                  text: items[i].value,
+                  style: const TextStyle(
+                    color: _textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
                   ),
-                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  data.label,
-                  style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
-                  overflow: TextOverflow.ellipsis,
+                TextSpan(
+                  text: ' ${items[i].label}',
+                  style: const TextStyle(
+                    color: _textMuted,
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
           ),
+          if (i < items.length - 1)
+            const Text(
+              '  \u00B7  ',
+              style: TextStyle(color: _textMuted, fontSize: 14),
+            ),
         ],
-      ),
+      ],
     );
   }
 }
 
-/* ========================== SEGMENTED TABS ========================== */
+class _InlineStatItem {
+  const _InlineStatItem(this.value, this.label);
+  final String value;
+  final String label;
+}
+
+/* ========================== SEGMENTED TABS (underline style) ========================== */
 
 class _SegmentedTabs extends StatefulWidget {
   const _SegmentedTabs({
@@ -712,20 +585,17 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Container(
-          height: 48,
-          decoration: BoxDecoration(
-            color: HomePage.surface,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: HomePage.line),
-          ),
-          child: Row(
-            children: [
-              _tab(widget.skillsLabel, 0),
-              _tab(widget.reviewsLabel, 1),
-              _tab(widget.activityLabel, 2),
-            ],
-          ),
+        Column(
+          children: [
+            Row(
+              children: [
+                _tab(widget.skillsLabel, 0),
+                _tab(widget.reviewsLabel, 1),
+                _tab(widget.activityLabel, 2),
+              ],
+            ),
+            Container(height: 1, color: _line),
+          ],
         ),
         const SizedBox(height: 14),
         AnimatedSwitcher(
@@ -740,31 +610,28 @@ class _SegmentedTabsState extends State<_SegmentedTabs> {
     );
   }
 
-  Expanded _tab(String label, int i) {
+  Widget _tab(String label, int i) {
     final active = _index == i;
-    return Expanded(
-      child: Padding(
-        padding: const EdgeInsets.all(5),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(10),
-          onTap: () => setState(() => _index = i),
-          child: Container(
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: active ? HomePage.accent.withValues(alpha: 0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: active ? HomePage.accent : Colors.transparent,
-                width: 1.5,
+    return Padding(
+      padding: const EdgeInsets.only(right: 24),
+      child: InkWell(
+        onTap: () => setState(() => _index = i),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: active ? _accent : Colors.transparent,
+                width: 2,
               ),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                color: active ? HomePage.accentAlt : HomePage.textMuted,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w500,
-                fontSize: 13,
-              ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: active ? _textPrimary : _textMuted,
+              fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+              fontSize: 14,
             ),
           ),
         ),
@@ -876,7 +743,7 @@ class _SkillsSectionState extends State<_SkillsSection> {
                   label: const Text('Add Skill'),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: HomePage.accentAlt,
-                    side: const BorderSide(color: HomePage.line),
+                    side: const BorderSide(color: _line),
                   ),
                 ),
               ),
@@ -908,215 +775,143 @@ class _ProfileSkillCard extends StatelessWidget {
   final bool showDelete;
   final VoidCallback? onDelete;
 
-  static IconData _categoryIcon(String category) {
-    switch (category.toLowerCase()) {
-      case 'design':
-        return HugeIcons.strokeRoundedPaintBrush01;
-      case 'development':
-      case 'programming':
-        return HugeIcons.strokeRoundedSourceCode;
-      case 'business':
-        return HugeIcons.strokeRoundedChart;
-      case 'music':
-        return HugeIcons.strokeRoundedMusicNote01;
-      case 'language':
-        return HugeIcons.strokeRoundedTranslation;
-      case 'writing':
-        return HugeIcons.strokeRoundedQuillWrite01;
-      case 'tutoring':
-        return HugeIcons.strokeRoundedTeacher;
-      case 'cooking':
-        return HugeIcons.strokeRoundedChefHat;
-      case 'photography':
-        return HugeIcons.strokeRoundedCamera01;
-      case 'marketing':
-        return HugeIcons.strokeRoundedMegaphone01;
-      case 'fitness':
-        return HugeIcons.strokeRoundedDumbbell01;
-      default:
-        return HugeIcons.strokeRoundedStars;
-    }
-  }
-
   static Color _categoryColor(String category) {
     switch (category.toLowerCase()) {
       case 'design':
-        return const Color(0xFFE879F9);
+      case 'writing':
+      case 'photography':
+        return _catPurple;
       case 'development':
       case 'programming':
-        return const Color(0xFF60A5FA);
       case 'business':
-        return const Color(0xFF34D399);
-      case 'music':
-        return const Color(0xFFFBBF24);
-      case 'language':
-        return const Color(0xFFF87171);
-      case 'writing':
-        return const Color(0xFF818CF8);
-      case 'tutoring':
-        return const Color(0xFF2DD4BF);
-      case 'cooking':
-        return const Color(0xFFFF9F43);
-      case 'photography':
-        return const Color(0xFFFF6B6B);
       case 'marketing':
-        return const Color(0xFF48DBFB);
+        return _catBlue;
+      case 'music':
+      case 'language':
+        return _catRose;
+      case 'tutoring':
       case 'fitness':
-        return const Color(0xFF1DD1A1);
+        return _catGreen;
+      case 'cooking':
       default:
-        return const Color(0xFF94A3B8);
+        return _catAmber;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final catColor = _categoryColor(skill.category);
-    final catIcon = _categoryIcon(skill.category);
 
     return Container(
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(12),
         color: HomePage.surface,
-        border: Border.all(color: HomePage.line),
+        border: Border.all(color: _line),
       ),
-      clipBehavior: Clip.antiAlias,
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(left: BorderSide(color: catColor, width: 4)),
-        ),
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Title row with category badge
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    skill.title,
-                    style: const TextStyle(
-                      color: HomePage.textPrimary,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 16,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title row with category dot
+          Row(
+            children: [
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: catColor,
                 ),
-                _badge(skill.category, catColor, icon: catIcon),
-                if (showDelete) ...[
-                  const SizedBox(width: 6),
-                  InkWell(
-                    onTap: onDelete,
-                    borderRadius: BorderRadius.circular(8),
-                    child: const Padding(
-                      padding: EdgeInsets.all(4),
-                      child: Icon(HugeIcons.strokeRoundedDelete02, size: 16, color: Color(0xFFEF4444)),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-            const SizedBox(height: 8),
-            // Description
-            if (skill.description.isNotEmpty)
+              ),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  skill.description,
-                  maxLines: 3,
+                  skill.title,
+                  style: const TextStyle(
+                    color: _textPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 16,
+                  ),
+                  maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: HomePage.textMuted, fontSize: 13, height: 1.4),
                 ),
               ),
-            if (skill.description.isEmpty) const Spacer(),
-            const SizedBox(height: 8),
-            // Tags
-            if (skill.tags.isNotEmpty)
-              SizedBox(
-                height: 26,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: skill.tags.length > 4 ? 4 : skill.tags.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 6),
-                  itemBuilder: (_, i) {
-                    if (i == 3 && skill.tags.length > 4) {
-                      return _tagChip('+${skill.tags.length - 3}', highlight: true, color: catColor);
-                    }
-                    return _tagChip(skill.tags[i], color: catColor);
-                  },
+              if (showDelete) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: onDelete,
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(HugeIcons.strokeRoundedDelete02, size: 16, color: Color(0xFFEF4444)),
+                  ),
                 ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Description
+          if (skill.description.isNotEmpty)
+            Expanded(
+              child: Text(
+                skill.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(color: _textMuted, fontSize: 13, height: 1.4),
               ),
-            const SizedBox(height: 8),
-            // Bottom row: difficulty, hours, delivery
-            Row(
+            ),
+          if (skill.description.isEmpty) const Spacer(),
+          const SizedBox(height: 8),
+          // Tags (monochrome)
+          if (skill.tags.isNotEmpty)
+            SizedBox(
+              height: 26,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: skill.tags.length > 4 ? 4 : skill.tags.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                itemBuilder: (_, i) {
+                  if (i == 3 && skill.tags.length > 4) {
+                    return _tagChip('+${skill.tags.length - 3}');
+                  }
+                  return _tagChip(skill.tags[i]);
+                },
+              ),
+            ),
+          const SizedBox(height: 8),
+          // Bottom stats: plain text with middle dots
+          Text.rich(
+            TextSpan(
+              style: const TextStyle(color: _textMuted, fontSize: 12),
               children: [
-                _pill(skill.difficulty, const Color(0xFFF59E0B)),
-                const SizedBox(width: 8),
-                _pill(skill.delivery, HomePage.textMuted),
-                const SizedBox(width: 8),
-                _pill(
-                  '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h',
-                  HomePage.textMuted,
+                TextSpan(text: skill.difficulty),
+                const TextSpan(text: '  \u00B7  '),
+                TextSpan(text: skill.delivery),
+                const TextSpan(text: '  \u00B7  '),
+                TextSpan(
+                  text: '${skill.estimatedHours.toStringAsFixed(skill.estimatedHours == skill.estimatedHours.roundToDouble() ? 0 : 1)}h',
                 ),
               ],
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  static Widget _badge(String text, Color color, {IconData? icon}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.4)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, size: 12, color: color),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
           ),
         ],
       ),
     );
   }
 
-  static Widget _pill(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-      decoration: BoxDecoration(
-        color: HomePage.bg,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: HomePage.line),
-      ),
-      child: Text(text, style: TextStyle(color: color, fontSize: 11)),
-    );
-  }
-
-  static Widget _tagChip(String text, {bool highlight = false, Color? color}) {
-    final c = color ?? HomePage.accent;
+  static Widget _tagChip(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: highlight ? c.withValues(alpha: 0.15) : c.withValues(alpha: 0.08),
+        color: HomePage.bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: c.withValues(alpha: 0.3)),
+        border: Border.all(color: _line),
       ),
       child: Text(
         text,
-        style: TextStyle(
-          color: highlight ? c : HomePage.textPrimary,
+        style: const TextStyle(
+          color: _textMuted,
           fontSize: 11,
-          fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
         ),
       ),
     );
@@ -1138,7 +933,7 @@ class _InfoCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: HomePage.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: HomePage.line),
+        border: Border.all(color: _line),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1147,11 +942,11 @@ class _InfoCard extends StatelessWidget {
             children: [
               Icon(icon, size: 16, color: HomePage.accentAlt),
               const SizedBox(width: 8),
-              Text(title, style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
+              Text(title, style: const TextStyle(color: _textPrimary, fontWeight: FontWeight.w700, fontSize: 14)),
             ],
           ),
           const SizedBox(height: 8),
-          Text(content, style: const TextStyle(color: HomePage.textMuted, fontSize: 13, height: 1.4)),
+          Text(content, style: const TextStyle(color: _textMuted, fontSize: 13, height: 1.4)),
         ],
       ),
     );
@@ -1210,13 +1005,13 @@ class _ReviewsSectionState extends State<_ReviewsSection> {
         decoration: BoxDecoration(
           color: HomePage.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: HomePage.line),
+          border: Border.all(color: _line),
         ),
         child: Column(
           children: [
-            Icon(HugeIcons.strokeRoundedStar, size: 40, color: HomePage.textMuted.withValues(alpha: 0.5)),
+            Icon(HugeIcons.strokeRoundedStar, size: 40, color: _textMuted.withValues(alpha: 0.5)),
             const SizedBox(height: 10),
-            const Text('No reviews yet', style: TextStyle(color: HomePage.textMuted, fontSize: 15)),
+            const Text('No reviews yet', style: TextStyle(color: _textMuted, fontSize: 15)),
           ],
         ),
       );
@@ -1225,39 +1020,29 @@ class _ReviewsSectionState extends State<_ReviewsSection> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Summary bar
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          decoration: BoxDecoration(
-            color: HomePage.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: HomePage.line),
-          ),
+        // Inline review summary (no card)
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
           child: Row(
             children: [
               Text(
                 _avgRating.toStringAsFixed(1),
-                style: const TextStyle(color: Color(0xFFF59E0B), fontSize: 28, fontWeight: FontWeight.w800),
+                style: const TextStyle(color: _textPrimary, fontSize: 28, fontWeight: FontWeight.w800),
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  StarRating(rating: _avgRating, compact: true),
-                  const SizedBox(height: 2),
-                  Text(
-                    '$_total review${_total == 1 ? '' : 's'}',
-                    style: const TextStyle(color: HomePage.textMuted, fontSize: 12),
-                  ),
-                ],
+              StarRating(rating: _avgRating, compact: true),
+              const SizedBox(width: 10),
+              Text(
+                '$_total review${_total == 1 ? '' : 's'}',
+                style: const TextStyle(color: _textMuted, fontSize: 13),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
-        for (final review in reviews) ...[
-          _ReviewCard(review: review),
-          const SizedBox(height: 8),
+        for (int i = 0; i < reviews.length; i++) ...[
+          _ReviewCard(review: reviews[i]),
+          if (i < reviews.length - 1)
+            const Divider(color: _line, height: 1),
         ],
       ],
     );
@@ -1275,13 +1060,8 @@ class _ReviewCard extends StatelessWidget {
         ? '${_monthName(date.month)} ${date.day}, ${date.year}'
         : '';
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: HomePage.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: HomePage.line),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1289,7 +1069,7 @@ class _ReviewCard extends StatelessWidget {
             children: [
               CircleAvatar(
                 radius: 18,
-                backgroundColor: HomePage.accent.withValues(alpha: 0.15),
+                backgroundColor: _accent.withValues(alpha: 0.15),
                 foregroundImage: review.reviewerPhoto != null && review.reviewerPhoto!.isNotEmpty
                     ? NetworkImage(review.reviewerPhoto!)
                     : null,
@@ -1305,14 +1085,14 @@ class _ReviewCard extends StatelessWidget {
                   children: [
                     Text(
                       review.reviewerName ?? 'Anonymous',
-                      style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                      style: const TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                     ),
                     Row(
                       children: [
                         StarRating(rating: review.rating.toDouble(), compact: true),
                         if (dateStr.isNotEmpty) ...[
                           const SizedBox(width: 8),
-                          Text(dateStr, style: const TextStyle(color: HomePage.textMuted, fontSize: 11)),
+                          Text(dateStr, style: const TextStyle(color: _textMuted, fontSize: 11)),
                         ],
                       ],
                     ),
@@ -1326,7 +1106,7 @@ class _ReviewCard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
               decoration: BoxDecoration(
-                color: HomePage.accent.withValues(alpha: 0.1),
+                color: _accent.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
@@ -1339,7 +1119,7 @@ class _ReviewCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               review.reviewText!,
-              style: const TextStyle(color: HomePage.textPrimary, fontSize: 13, height: 1.5),
+              style: const TextStyle(color: _textPrimary, fontSize: 13, height: 1.5),
             ),
           ],
         ],
@@ -1417,13 +1197,13 @@ class _SwapHistorySectionState extends State<_SwapHistorySection> {
         decoration: BoxDecoration(
           color: HomePage.surface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: HomePage.line),
+          border: Border.all(color: _line),
         ),
         child: Column(
           children: [
-            Icon(HugeIcons.strokeRoundedExchange01, size: 40, color: HomePage.textMuted.withValues(alpha: 0.5)),
+            Icon(HugeIcons.strokeRoundedExchange01, size: 40, color: _textMuted.withValues(alpha: 0.5)),
             const SizedBox(height: 10),
-            const Text('No completed swaps yet', style: TextStyle(color: HomePage.textMuted, fontSize: 15)),
+            const Text('No completed swaps yet', style: TextStyle(color: _textMuted, fontSize: 15)),
           ],
         ),
       );
@@ -1469,13 +1249,13 @@ class _SwapHistoryCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: HomePage.surface,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: HomePage.line),
+          border: Border.all(color: _line),
         ),
         child: Row(
           children: [
             CircleAvatar(
               radius: 22,
-              backgroundColor: HomePage.accent.withValues(alpha: 0.15),
+              backgroundColor: _accent.withValues(alpha: 0.15),
               backgroundImage: (other?.photoUrl != null && other!.photoUrl!.isNotEmpty) ? NetworkImage(other.photoUrl!) : null,
               child: (other?.photoUrl == null || other!.photoUrl!.isEmpty)
                   ? Text(
@@ -1491,7 +1271,7 @@ class _SwapHistoryCard extends StatelessWidget {
                 children: [
                   Text(
                     other?.displayName ?? 'Unknown user',
-                    style: const TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(color: _textPrimary, fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -1505,7 +1285,7 @@ class _SwapHistoryCard extends StatelessWidget {
                           ),
                           child: Text(
                             swap.requesterOffer,
-                            style: const TextStyle(color: HomePage.textPrimary, fontSize: 11),
+                            style: const TextStyle(color: _textPrimary, fontSize: 11),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -1523,7 +1303,7 @@ class _SwapHistoryCard extends StatelessWidget {
                           ),
                           child: Text(
                             swap.requesterNeed,
-                            style: const TextStyle(color: HomePage.textPrimary, fontSize: 11),
+                            style: const TextStyle(color: _textPrimary, fontSize: 11),
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
@@ -1552,7 +1332,7 @@ class _SwapHistoryCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   _formatDate(date),
-                  style: const TextStyle(color: HomePage.textMuted, fontSize: 11),
+                  style: const TextStyle(color: _textMuted, fontSize: 11),
                 ),
               ],
             ),
@@ -1587,7 +1367,7 @@ class _EmptyProfileCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: HomePage.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: HomePage.line),
+          border: Border.all(color: _line),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -1596,19 +1376,19 @@ class _EmptyProfileCard extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: HomePage.accent.withValues(alpha: 0.1),
+                color: _accent.withValues(alpha: 0.1),
               ),
               child: const Icon(HugeIcons.strokeRoundedUser, size: 40, color: HomePage.accentAlt),
             ),
             const SizedBox(height: 16),
             const Text(
               "Let's set up your profile",
-              style: TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w700, fontSize: 18),
+              style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w700, fontSize: 18),
             ),
             const SizedBox(height: 6),
             const Text(
               "We'll use your details to personalize your page.",
-              style: TextStyle(color: HomePage.textMuted, fontSize: 14),
+              style: TextStyle(color: _textMuted, fontSize: 14),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -1618,7 +1398,7 @@ class _EmptyProfileCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: onSetup,
                 style: FilledButton.styleFrom(
-                  backgroundColor: HomePage.accent,
+                  backgroundColor: _accent,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -1643,7 +1423,7 @@ class _EmptySkills extends StatelessWidget {
       decoration: BoxDecoration(
         color: HomePage.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: HomePage.line),
+        border: Border.all(color: _line),
       ),
       child: Column(
         children: [
@@ -1651,19 +1431,19 @@ class _EmptySkills extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: HomePage.accent.withValues(alpha: 0.1),
+              color: _accent.withValues(alpha: 0.1),
             ),
             child: const Icon(HugeIcons.strokeRoundedStars, size: 36, color: HomePage.accentAlt),
           ),
           const SizedBox(height: 14),
           const Text(
             'No skills posted yet',
-            style: TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
+            style: TextStyle(color: _textPrimary, fontWeight: FontWeight.w800, fontSize: 18),
           ),
           const SizedBox(height: 6),
           const Text(
             'Share your expertise with the community',
-            style: TextStyle(color: HomePage.textMuted),
+            style: TextStyle(color: _textMuted),
           ),
           const SizedBox(height: 14),
           SizedBox(
@@ -1673,7 +1453,7 @@ class _EmptySkills extends StatelessWidget {
               icon: const Icon(HugeIcons.strokeRoundedAdd01, size: 18),
               label: const Text('Post Your First Skill'),
               style: FilledButton.styleFrom(
-                backgroundColor: HomePage.accent,
+                backgroundColor: _accent,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -1693,7 +1473,7 @@ class _AuthGuard extends StatelessWidget {
     return const Center(
       child: Text(
         'Please sign in to view your profile.',
-        style: TextStyle(color: HomePage.textPrimary),
+        style: TextStyle(color: _textPrimary),
       ),
     );
   }

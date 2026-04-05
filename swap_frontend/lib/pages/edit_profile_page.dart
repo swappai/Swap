@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -38,7 +39,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   String _skillsToOffer = '';
   String _servicesNeeded = '';
 
-  File? _avatar;
+  Uint8List? _avatarBytes;
+  String? _avatarFilename;
   String? _existingPhotoUrl;
 
   bool _loading = true;
@@ -106,9 +108,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
       uiSettings: [
         AndroidUiSettings(toolbarTitle: 'Crop Photo', toolbarColor: bg, toolbarWidgetColor: Colors.white),
         IOSUiSettings(title: 'Crop Photo'),
+        if (kIsWeb) WebUiSettings(context: context),
       ],
     );
-    if (cropped != null && mounted) setState(() => _avatar = File(cropped.path));
+    if (cropped != null && mounted) {
+      final bytes = await cropped.readAsBytes();
+      final filename = cropped.path.split('/').last;
+      setState(() {
+        _avatarBytes = bytes;
+        _avatarFilename = filename;
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -122,6 +132,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final needsText = _needs.isNotEmpty
           ? _needs.map((e) => e.level.isNotEmpty ? '${e.name} (${e.level})' : e.name).join(', ')
           : _servicesNeeded;
+
+      // Upload photo first so photo_url is set before upsert
+      if (_avatarBytes != null) {
+        try {
+          await ProfileService().uploadPhoto(user.uid, _avatarBytes!, _avatarFilename ?? 'avatar.jpg');
+        } catch (e) {
+          debugPrint('Photo upload error (non-fatal): $e');
+        }
+      }
 
       await ProfileService().upsertProfile(
         uid: user.uid,
@@ -142,16 +161,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         accountType: _accountType,
         timeout: const Duration(seconds: 12),
       );
-
-      if (_avatar != null) {
-        try {
-          final bytes = await _avatar!.readAsBytes();
-          final filename = _avatar!.path.split('/').last;
-          await ProfileService().uploadPhoto(user.uid, bytes, filename);
-        } catch (e) {
-          debugPrint('Photo upload error (non-fatal): $e');
-        }
-      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -251,12 +260,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                       child: CircleAvatar(
                                         radius: 44,
                                         backgroundColor: surfaceAlt,
-                                        foregroundImage: _avatar != null
-                                            ? FileImage(_avatar!)
+                                        foregroundImage: _avatarBytes != null
+                                            ? MemoryImage(_avatarBytes!)
                                             : (_existingPhotoUrl != null && _existingPhotoUrl!.isNotEmpty
                                                 ? NetworkImage(_existingPhotoUrl!) as ImageProvider
                                                 : null),
-                                        child: _avatar == null && (_existingPhotoUrl == null || _existingPhotoUrl!.isEmpty)
+                                        child: _avatarBytes == null && (_existingPhotoUrl == null || _existingPhotoUrl!.isEmpty)
                                             ? const Text('U', style: TextStyle(color: textPrimary, fontSize: 32, fontWeight: FontWeight.w700))
                                             : null,
                                       ),
