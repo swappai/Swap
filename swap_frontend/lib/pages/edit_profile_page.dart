@@ -133,10 +133,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ? _needs.map((e) => e.level.isNotEmpty ? '${e.name} (${e.level})' : e.name).join(', ')
           : _servicesNeeded;
 
-      // Upload photo first so photo_url is set before upsert
+      // Upload photo first so we have the URL for upsert
+      String? photoUrl = _existingPhotoUrl;
       if (_avatarBytes != null) {
         try {
-          await ProfileService().uploadPhoto(user.uid, _avatarBytes!, _avatarFilename ?? 'avatar.jpg');
+          photoUrl = await ProfileService().uploadPhoto(user.uid, _avatarBytes!, _avatarFilename ?? 'avatar.jpg');
         } catch (e) {
           debugPrint('Photo upload error (non-fatal): $e');
         }
@@ -159,6 +160,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         emailUpdates: _emailUpdates,
         showCity: _showCity,
         accountType: _accountType,
+        photoUrl: photoUrl,
         timeout: const Duration(seconds: 12),
       );
 

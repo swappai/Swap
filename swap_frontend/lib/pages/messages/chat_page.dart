@@ -13,6 +13,7 @@ import '../../models/swap_request.dart';
 import '../../services/messaging_service.dart';
 import '../../widgets/message_bubble.dart';
 import '../../widgets/message_input.dart';
+import '../profile_page.dart';
 
 /// Page for a single chat conversation.
 class ChatPage extends StatefulWidget {
@@ -700,21 +701,29 @@ class _ChatPageState extends State<ChatPage> {
         ),
         title: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundImage: other?.photoUrl != null && other!.photoUrl!.isNotEmpty
-                  ? NetworkImage(other.photoUrl!)
-                  : null,
-              backgroundColor: HomePage.surfaceAlt,
-              child: other?.photoUrl == null || other!.photoUrl!.isEmpty
-                  ? Text(
-                      initial,
-                      style: const TextStyle(
-                        color: HomePage.textPrimary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    )
-                  : null,
+            GestureDetector(
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ProfilePage(uid: _otherUid)),
+              ),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: CircleAvatar(
+                  radius: 18,
+                  backgroundImage: other?.photoUrl != null && other!.photoUrl!.isNotEmpty
+                      ? NetworkImage(other.photoUrl!)
+                      : null,
+                  backgroundColor: HomePage.surfaceAlt,
+                  child: other?.photoUrl == null || other!.photoUrl!.isEmpty
+                      ? Text(
+                          initial,
+                          style: const TextStyle(
+                            color: HomePage.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             Column(

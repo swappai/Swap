@@ -211,7 +211,6 @@ class _ProfilePageState extends State<ProfilePage> {
                               swapsCompleted: swapsCompleted,
                               averageRating: averageRating,
                               swapCredits: swapCredits,
-                              joinedAt: joinedAt,
                             ),
 
                             const SizedBox(height: 28),
@@ -490,26 +489,20 @@ class _InlineStats extends StatelessWidget {
     required this.swapsCompleted,
     required this.averageRating,
     required this.swapCredits,
-    required this.joinedAt,
   });
   final int swapsCompleted;
   final double averageRating;
   final int swapCredits;
-  final DateTime? joinedAt;
 
   @override
   Widget build(BuildContext context) {
     final items = <_InlineStatItem>[
       _InlineStatItem('$swapsCompleted', 'Swaps'),
       _InlineStatItem(
-        averageRating > 0 ? averageRating.toStringAsFixed(1) : '-',
+        averageRating > 0 ? averageRating.toStringAsFixed(1) : 'New',
         'Rating',
       ),
       _InlineStatItem('$swapCredits', 'Credits'),
-      _InlineStatItem(
-        joinedAt != null ? _formatMonthYear(joinedAt!) : 'Recently',
-        'Joined',
-      ),
     ];
 
     return Wrap(
@@ -798,6 +791,36 @@ class _ProfileSkillCard extends StatelessWidget {
     }
   }
 
+  static IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return HugeIcons.strokeRoundedPaintBrush01;
+      case 'development':
+      case 'programming':
+        return HugeIcons.strokeRoundedSourceCode;
+      case 'business':
+        return HugeIcons.strokeRoundedChart;
+      case 'music':
+        return HugeIcons.strokeRoundedMusicNote01;
+      case 'language':
+        return HugeIcons.strokeRoundedTranslation;
+      case 'writing':
+        return HugeIcons.strokeRoundedQuillWrite01;
+      case 'tutoring':
+        return HugeIcons.strokeRoundedTeacher;
+      case 'cooking':
+        return HugeIcons.strokeRoundedChefHat;
+      case 'photography':
+        return HugeIcons.strokeRoundedCamera01;
+      case 'marketing':
+        return HugeIcons.strokeRoundedMegaphone01;
+      case 'fitness':
+        return HugeIcons.strokeRoundedDumbbell01;
+      default:
+        return HugeIcons.strokeRoundedStars;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final catColor = _categoryColor(skill.category);
@@ -812,18 +835,9 @@ class _ProfileSkillCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title row with category dot
+          // Title row with category badge pill
           Row(
             children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: catColor,
-                ),
-              ),
-              const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   skill.title,
@@ -834,6 +848,26 @@ class _ProfileSkillCard extends StatelessWidget {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: catColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(color: catColor.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_categoryIcon(skill.category), size: 12, color: catColor),
+                    const SizedBox(width: 4),
+                    Text(
+                      skill.category,
+                      style: TextStyle(color: catColor, fontSize: 11, fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
               ),
               if (showDelete) ...[

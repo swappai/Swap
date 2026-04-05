@@ -10,6 +10,7 @@ import '../models/conversation.dart';
 import '../widgets/app_sidebar.dart';
 import 'home_page.dart';
 import 'messages/chat_page.dart';
+import 'profile_page.dart';
 
 class RequestsPage extends StatefulWidget {
   const RequestsPage({super.key});
@@ -488,52 +489,67 @@ class _SwapRequestCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(2.5),
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: statusColor, width: 2.5),
-                  ),
-                  child: CircleAvatar(
-                    radius: 22,
-                    backgroundColor: HomePage.surfaceAlt,
-                    backgroundImage: (other?.photoUrl != null &&
-                            other!.photoUrl!.isNotEmpty)
-                        ? NetworkImage(other.photoUrl!)
-                        : null,
-                    child:
-                        (other?.photoUrl == null || other!.photoUrl!.isEmpty)
-                            ? const Icon(
-                                Icons.person,
+                GestureDetector(
+                  onTap: () {
+                    final otherUid = isIncoming ? request.requesterUid : request.recipientUid;
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => ProfilePage(uid: otherUid)),
+                    );
+                  },
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(2.5),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(color: statusColor, width: 2.5),
+                          ),
+                          child: CircleAvatar(
+                            radius: 22,
+                            backgroundColor: HomePage.surfaceAlt,
+                            backgroundImage: (other?.photoUrl != null &&
+                                    other!.photoUrl!.isNotEmpty)
+                                ? NetworkImage(other.photoUrl!)
+                                : null,
+                            child:
+                                (other?.photoUrl == null || other!.photoUrl!.isEmpty)
+                                    ? const Icon(
+                                        Icons.person,
+                                        color: HomePage.textMuted,
+                                      )
+                                    : null,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              other?.displayName ?? other?.email ?? 'Unknown user',
+                              style: const TextStyle(
+                                color: HomePage.textPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              isIncoming
+                                  ? 'wants to swap with you'
+                                  : 'swap request sent',
+                              style: const TextStyle(
                                 color: HomePage.textMuted,
-                              )
-                            : null,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        other?.displayName ?? other?.email ?? 'Unknown user',
-                        style: const TextStyle(
-                          color: HomePage.textPrimary,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      Text(
-                        isIncoming
-                            ? 'wants to swap with you'
-                            : 'swap request sent',
-                        style: const TextStyle(
-                          color: HomePage.textMuted,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+                const Spacer(),
                 Text(
                   _timeAgo(request.createdAt),
                   style: const TextStyle(

@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../models/conversation.dart';
 import '../pages/home_page.dart';
+import '../pages/profile_page.dart';
 
 /// A tile representing a single conversation in the list.
 class ConversationTile extends StatelessWidget {
@@ -33,23 +34,33 @@ class ConversationTile extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar
-            CircleAvatar(
-              radius: 24,
-              backgroundImage: other?.photoUrl != null && other!.photoUrl!.isNotEmpty
-                  ? NetworkImage(other.photoUrl!)
+            // Avatar — tap to view profile
+            GestureDetector(
+              onTap: other != null
+                  ? () => Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => ProfilePage(uid: other.uid)),
+                      )
                   : null,
-              backgroundColor: HomePage.surfaceAlt,
-              child: other?.photoUrl == null || other!.photoUrl!.isEmpty
-                  ? Text(
-                      initial,
-                      style: const TextStyle(
-                        color: HomePage.textPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 18,
-                      ),
-                    )
-                  : null,
+              child: MouseRegion(
+                cursor: other != null ? SystemMouseCursors.click : SystemMouseCursors.basic,
+                child: CircleAvatar(
+                  radius: 24,
+                  backgroundImage: other?.photoUrl != null && other!.photoUrl!.isNotEmpty
+                      ? NetworkImage(other.photoUrl!)
+                      : null,
+                  backgroundColor: HomePage.surfaceAlt,
+                  child: other?.photoUrl == null || other!.photoUrl!.isEmpty
+                      ? Text(
+                          initial,
+                          style: const TextStyle(
+                            color: HomePage.textPrimary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 18,
+                          ),
+                        )
+                      : null,
+                ),
+              ),
             ),
             const SizedBox(width: 12),
             // Content
