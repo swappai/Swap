@@ -8,6 +8,7 @@ from app.schemas import SkillCreate, SkillUpdate, SkillResponse
 from app.cosmos_db import get_cosmos_service
 from app.embeddings import get_embedding_service
 from app.azure_search import get_skills_search_service
+from app.cache import get_cache_service
 
 router = APIRouter(prefix="/skills", tags=["skills"])
 
@@ -184,8 +185,9 @@ def delete_skill(
 def dedup_skills_index():
     """Remove duplicate documents from the skills search index.
 
-    Duplicates are identified by (posted_by, title) composite key.
+    Duplicates are identified by (posted_by, title) and (poster_name, title).
     Keeps one document per group and deletes the rest.
+    Also flushes skill search cache after dedup.
     """
     skills_search = get_skills_search_service()
     client = skills_search.search_client
@@ -193,34 +195,61 @@ def dedup_skills_index():
     # Fetch all documents
     results = client.search(
         search_text="*",
-        select=["id", "skill_id", "posted_by", "title"],
+        select=["id", "skill_id", "posted_by", "title", "poster_name"],
         top=1000,
     )
 
     docs = [
-        {"id": r["id"], "posted_by": r.get("posted_by", ""), "title": r.get("title", "")}
+        {
+            "id": r["id"],
+            "posted_by": r.get("posted_by", ""),
+            "title": r.get("title", ""),
+            "poster_name": r.get("poster_name", ""),
+        }
         for r in results
     ]
 
-    # Group by composite key
+    # Pass 1: Group by (posted_by, title)
     groups: dict = defaultdict(list)
     for doc in docs:
         key = f"{doc['posted_by']}::{doc['title']}"
         groups[key].append(doc)
 
     to_delete = []
+    surviving = []
     for key, group in groups.items():
+        if len(group) > 1:
+            to_delete.extend({"id": d["id"]} for d in group[1:])
+            surviving.append(group[0])
+        else:
+            surviving.append(group[0])
+
+    # Pass 2: Group by (poster_name, title) to catch seed duplicates
+    display_groups: dict = defaultdict(list)
+    for doc in surviving:
+        key = f"{doc['poster_name']}::{doc['title']}"
+        display_groups[key].append(doc)
+
+    for key, group in display_groups.items():
         if len(group) > 1:
             to_delete.extend({"id": d["id"]} for d in group[1:])
 
     if not to_delete:
+        # Still flush cache in case stale duplicates are cached
+        cache_service = get_cache_service()
+        cache_service.clear_pattern("skill_search:*")
         return {"message": "No duplicates found", "total_docs": len(docs)}
 
     for i in range(0, len(to_delete), 100):
         client.delete_documents(to_delete[i:i + 100])
 
+    # Flush skill search cache so stale results with duplicates are cleared
+    cache_service = get_cache_service()
+    cleared = cache_service.clear_pattern("skill_search:*")
+
     return {
         "message": f"Deleted {len(to_delete)} duplicate documents",
         "total_docs": len(docs),
         "duplicates_removed": len(to_delete),
+        "cache_keys_cleared": cleared,
     }

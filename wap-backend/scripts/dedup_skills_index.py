@@ -34,7 +34,7 @@ def dedup_skills_index(apply: bool = False) -> None:
 
     # Pull all documents from the index
     print("Fetching all documents from skills index...")
-    results = client.search(search_text="*", select=["id", "skill_id", "posted_by", "title"], top=1000)
+    results = client.search(search_text="*", select=["id", "skill_id", "posted_by", "title", "poster_name"], top=1000)
 
     docs = []
     for r in results:
@@ -43,26 +43,42 @@ def dedup_skills_index(apply: bool = False) -> None:
             "skill_id": r.get("skill_id", ""),
             "posted_by": r.get("posted_by", ""),
             "title": r.get("title", ""),
+            "poster_name": r.get("poster_name", ""),
         })
 
     print(f"Total documents: {len(docs)}")
 
-    # Group by (posted_by, title)
+    # Pass 1: Group by (posted_by, title)
     groups: dict[str, list[dict]] = defaultdict(list)
     for doc in docs:
         key = f"{doc['posted_by']}::{doc['title']}"
         groups[key].append(doc)
 
     to_delete = []
+    surviving = []
     for key, group in groups.items():
-        if len(group) <= 1:
-            continue
-        # Keep first, delete rest
-        keep = group[0]
-        dupes = group[1:]
-        print(f"  DUPE: \"{group[0]['title']}\" by {group[0]['posted_by']} — {len(group)} copies, deleting {len(dupes)}")
-        for d in dupes:
-            to_delete.append({"id": d["id"]})
+        if len(group) > 1:
+            keep = group[0]
+            dupes = group[1:]
+            print(f"  DUPE (posted_by): \"{group[0]['title']}\" by {group[0]['posted_by']} — {len(group)} copies, deleting {len(dupes)}")
+            for d in dupes:
+                to_delete.append({"id": d["id"]})
+            surviving.append(keep)
+        else:
+            surviving.append(group[0])
+
+    # Pass 2: Group survivors by (poster_name, title) to catch seed duplicates
+    display_groups: dict[str, list[dict]] = defaultdict(list)
+    for doc in surviving:
+        key = f"{doc['poster_name']}::{doc['title']}"
+        display_groups[key].append(doc)
+
+    for key, group in display_groups.items():
+        if len(group) > 1:
+            dupes = group[1:]
+            print(f"  DUPE (poster_name): \"{group[0]['title']}\" by {group[0]['poster_name']} — {len(group)} copies, deleting {len(dupes)}")
+            for d in dupes:
+                to_delete.append({"id": d["id"]})
 
     if not to_delete:
         print("\nNo duplicates found!")

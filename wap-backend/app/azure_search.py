@@ -416,16 +416,29 @@ class SkillsSearchService:
                     "score": score,
                 })
 
-        # Deduplicate by skill_id and by title+poster, keeping highest score
-        seen = {}
+        # Pass 1: deduplicate exact same documents (by id)
+        by_id = {}
+        for m in matches:
+            doc_id = m.get("id")
+            if doc_id not in by_id or m.get("score", 0) > by_id[doc_id].get("score", 0):
+                by_id[doc_id] = m
+        matches = list(by_id.values())
+
+        # Pass 2: deduplicate by posted_by + title composite key
+        seen_keys = {}
         for m in matches:
             key = f"{m.get('posted_by', '')}::{m.get('title', '')}"
-            sid = m.get("skill_id") or m.get("id") or key
-            if sid not in seen or m.get("score", 0) > seen[sid].get("score", 0):
-                seen[sid] = m
-            if key not in seen or m.get("score", 0) > seen[key].get("score", 0):
-                seen[key] = m
-        matches = list(seen.values())
+            if key not in seen_keys or m.get("score", 0) > seen_keys[key].get("score", 0):
+                seen_keys[key] = m
+        matches = list(seen_keys.values())
+
+        # Pass 3: deduplicate by poster_name + title (catches seed duplicates)
+        seen_display = {}
+        for m in matches:
+            key = f"{m.get('poster_name', '')}::{m.get('title', '')}"
+            if key not in seen_display or m.get("score", 0) > seen_display[key].get("score", 0):
+                seen_display[key] = m
+        matches = list(seen_display.values())
 
         return matches
 
