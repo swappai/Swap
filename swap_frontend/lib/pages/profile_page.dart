@@ -397,16 +397,18 @@ class _HeroSection extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               if (isOwnProfile && onEdit != null)
-                TextButton(
+                TextButton.icon(
                   onPressed: onEdit,
+                  icon: const Icon(HugeIcons.strokeRoundedEdit02, size: 16),
+                  label: const Text('Edit Profile'),
                   style: TextButton.styleFrom(foregroundColor: _textMuted),
-                  child: const Text('Edit Profile'),
                 ),
               if (isOwnProfile && onSettings != null)
-                TextButton(
+                TextButton.icon(
                   onPressed: onSettings,
+                  icon: const Icon(HugeIcons.strokeRoundedSettings02, size: 16),
+                  label: const Text('Settings'),
                   style: TextButton.styleFrom(foregroundColor: _textMuted),
-                  child: const Text('Settings'),
                 ),
               if (!isOwnProfile && onMessage != null)
                 TextButton(
@@ -1467,7 +1469,7 @@ class _EmptySkills extends StatelessWidget {
               shape: BoxShape.circle,
               color: _accent.withValues(alpha: 0.1),
             ),
-            child: const Icon(HugeIcons.strokeRoundedStars, size: 36, color: HomePage.accentAlt),
+            child: const Icon(HugeIcons.strokeRoundedNoteAdd, size: 36, color: HomePage.accentAlt),
           ),
           const SizedBox(height: 14),
           const Text(

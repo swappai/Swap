@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
 import 'home_page.dart';
@@ -45,14 +46,14 @@ class _PostSkillPageState extends State<PostSkillPage> {
   final List<String> _deliverables = [];
 
   static const _categories = [
-    ('Design', Icons.brush_outlined, Color(0xFFE879F9)),
-    ('Development', Icons.code_outlined, Color(0xFF60A5FA)),
-    ('Business', Icons.trending_up_outlined, Color(0xFF34D399)),
-    ('Music', Icons.music_note_outlined, Color(0xFFFBBF24)),
-    ('Language', Icons.translate_outlined, Color(0xFFF87171)),
-    ('Writing', Icons.edit_note_outlined, Color(0xFF818CF8)),
-    ('Tutoring', Icons.school_outlined, Color(0xFF2DD4BF)),
-    ('Other', Icons.category_outlined, Color(0xFF94A3B8)),
+    ('Design', HugeIcons.strokeRoundedPaintBrush01, Color(0xFFE879F9)),
+    ('Development', HugeIcons.strokeRoundedSourceCode, Color(0xFF60A5FA)),
+    ('Business', HugeIcons.strokeRoundedChart, Color(0xFF34D399)),
+    ('Music', HugeIcons.strokeRoundedMusicNote01, Color(0xFFFBBF24)),
+    ('Language', HugeIcons.strokeRoundedTranslation, Color(0xFFF87171)),
+    ('Writing', HugeIcons.strokeRoundedQuillWrite01, Color(0xFF818CF8)),
+    ('Tutoring', HugeIcons.strokeRoundedTeacher, Color(0xFF2DD4BF)),
+    ('Other', HugeIcons.strokeRoundedStars, Color(0xFF94A3B8)),
   ];
   static const _levels = ['Beginner', 'Intermediate', 'Advanced'];
   static const _deliveryOptions = ['Remote Only', 'In-Person', 'Hybrid'];
