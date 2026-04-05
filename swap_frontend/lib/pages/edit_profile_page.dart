@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -341,6 +342,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ]),
                             const SizedBox(height: 24),
 
+                            // Account Type
+                            Text('Account Type', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
+                            const SizedBox(height: 8),
+                            Row(children: [
+                              Expanded(
+                                child: _AccountTypeOption(
+                                  icon: HugeIcons.strokeRoundedUser,
+                                  label: 'Person',
+                                  selected: _accountType == 'person',
+                                  onTap: () => setState(() => _accountType = 'person'),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _AccountTypeOption(
+                                  icon: HugeIcons.strokeRoundedStore01,
+                                  label: 'Business',
+                                  selected: _accountType == 'business',
+                                  onTap: () => setState(() => _accountType = 'business'),
+                                ),
+                              ),
+                            ]),
+                            const SizedBox(height: 24),
+
                             // Services needed (display current, allow editing)
                             Text('Services You Need', style: TextStyle(color: textPrimary, fontWeight: FontWeight.w700, fontSize: 16)),
                             const SizedBox(height: 4),
@@ -407,4 +432,62 @@ class _ServiceEntry {
   final String category;
   final String level;
   _ServiceEntry({required this.name, required this.category, required this.level});
+}
+
+class _AccountTypeOption extends StatelessWidget {
+  const _AccountTypeOption({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: selected
+                ? _EditProfilePageState.accentSoft
+                : _EditProfilePageState.surfaceAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: selected
+                  ? _EditProfilePageState.accent
+                  : _EditProfilePageState.line,
+              width: selected ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20, color: selected ? const Color(0xFF9F67FF) : _EditProfilePageState.textMuted),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  color: selected ? Colors.white : _EditProfilePageState.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (selected) ...[
+                const SizedBox(width: 8),
+                Icon(HugeIcons.strokeRoundedCheckmarkCircle01, size: 18, color: const Color(0xFF9F67FF)),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
