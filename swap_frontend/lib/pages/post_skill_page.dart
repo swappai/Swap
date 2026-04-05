@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/skill_service.dart';
 import 'home_page.dart';
@@ -288,7 +289,7 @@ class _PostSkillPageState extends State<PostSkillPage>
               ),
             ],
           ),
-          child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 24),
+          child: const Icon(HugeIcons.strokeRoundedQuillWrite01, color: Colors.white, size: 24),
         ),
         const SizedBox(width: 16),
         Expanded(
