@@ -24,6 +24,7 @@ dependencies:
   http_parser: ^4.1.0
   intl: ^0.20.2
   hugeicons: ^0.0.7
+  image_cropper: ^12.1.1
 
 dev_dependencies:
   flutter_test:

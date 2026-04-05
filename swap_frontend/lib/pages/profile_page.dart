@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../services/b2c_auth_service.dart';
@@ -36,9 +39,38 @@ class _ProfilePageState extends State<ProfilePage> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
     if (picked == null) return;
+
+    // Crop to circle for profile photo
+    final cropped = await ImageCropper().cropImage(
+      sourcePath: picked.path,
+      aspectRatio: const CropAspectRatio(ratioX: 1, ratioY: 1),
+      uiSettings: [
+        AndroidUiSettings(
+          toolbarTitle: 'Crop Profile Photo',
+          toolbarColor: const Color(0xFF1A1A2E),
+          toolbarWidgetColor: Colors.white,
+          activeControlsWidgetColor: HomePage.accent,
+          lockAspectRatio: true,
+          cropStyle: CropStyle.circle,
+        ),
+        IOSUiSettings(
+          title: 'Crop Profile Photo',
+          aspectRatioLockEnabled: true,
+          resetAspectRatioEnabled: false,
+          cropStyle: CropStyle.circle,
+        ),
+        WebUiSettings(context: context),
+      ],
+    );
+    if (cropped == null) return;
+
     try {
-      final bytes = await picked.readAsBytes();
-      await ProfileService().uploadPhoto(uid, bytes, picked.name);
+      final bytes = await File(cropped.path).readAsBytes();
+      final name = picked.name;
+      await ProfileService().uploadPhoto(uid, bytes, name);
+      // Clear Flutter's image cache so the new photo shows immediately
+      imageCache.clear();
+      imageCache.clearLiveImages();
       if (mounted) setState(() => _refreshKey++);
     } catch (e) {
       if (mounted) {
@@ -277,34 +309,15 @@ class _HeroSection extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
-          // Gradient cover
+          // Cover
           Container(
             height: 140,
             width: double.infinity,
             decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF4F46E5), Color(0xFF7C3AED), Color(0xFF9333EA)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              color: Color(0xFF7C3AED),
             ),
             child: Stack(
               children: [
-                // Subtle pattern overlay
-                Positioned.fill(
-                  child: Opacity(
-                    opacity: 0.08,
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        gradient: RadialGradient(
-                          center: Alignment.topRight,
-                          radius: 1.5,
-                          colors: [Colors.white, Colors.transparent],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
                 // Action buttons in top right of gradient
                 Positioned(
                   top: 12,
@@ -373,11 +386,7 @@ class _HeroSection extends StatelessWidget {
                                 padding: const EdgeInsets.all(3),
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  gradient: LinearGradient(
-                                    colors: [Color(0xFF9F67FF), Color(0xFF7C3AED)],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
+                                  color: Color(0xFF7C3AED),
                                 ),
                                 child: FutureBuilder<String?>(
                                   future: _resolvePhotoUrl(photoUrl),
@@ -630,14 +639,6 @@ class _GlassStatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(14),
         color: HomePage.surface,
         border: Border.all(color: HomePage.line),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            data.color.withValues(alpha: 0.06),
-            HomePage.surface,
-          ],
-        ),
       ),
       child: Row(
         children: [
@@ -1209,11 +1210,6 @@ class _ReviewsSectionState extends State<_ReviewsSection> {
             color: HomePage.surface,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: HomePage.line),
-            gradient: LinearGradient(
-              colors: [const Color(0xFFF59E0B).withValues(alpha: 0.06), HomePage.surface],
-              begin: Alignment.centerLeft,
-              end: Alignment.centerRight,
-            ),
           ),
           child: Row(
             children: [
