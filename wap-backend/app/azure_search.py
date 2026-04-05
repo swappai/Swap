@@ -200,7 +200,7 @@ class AzureSearchService:
                     "services_needed": result.get("services_needed"),
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
-                    "account_type": result.get("account_type", "person"),
+                    "account_type": result.get("account_type") or "person",
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
                     "average_rating": result.get("average_rating", 0),
@@ -257,7 +257,7 @@ class AzureSearchService:
                     "services_needed": result.get("services_needed"),
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
-                    "account_type": result.get("account_type", "person"),
+                    "account_type": result.get("account_type") or "person",
                     "swap_credits": result.get("swap_credits", 0),
                     "swaps_completed": result.get("swaps_completed", 0),
                     "average_rating": result.get("average_rating", 0),
@@ -412,7 +412,7 @@ class SkillsSearchService:
                     "poster_swap_credits": result.get("poster_swap_credits", 0),
                     "poster_average_rating": result.get("poster_average_rating", 0),
                     "poster_review_count": result.get("poster_review_count", 0),
-                    "poster_account_type": result.get("poster_account_type", "person"),
+                    "poster_account_type": result.get("poster_account_type") or "person",
                     "score": score,
                 })
 
