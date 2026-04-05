@@ -5,6 +5,7 @@ import 'landing_page.dart';
 import 'notifications_page.dart';
 import 'profile_page.dart';
 import '../services/notification_service.dart';
+import '../services/profile_service.dart';
 import '../services/search_service.dart';
 import '../services/skill_service.dart';
 import '../services/b2c_auth_service.dart';
@@ -40,12 +41,14 @@ class _HomePageState extends State<HomePage> {
   String _currentQuery = '';
   int _unreadNotifCount = 0;
   Timer? _notifTimer;
+  String? _photoUrl;
 
   @override
   void initState() {
     super.initState();
     _loadInitialResults();
     _fetchUnreadCount();
+    _fetchProfile();
     _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchUnreadCount());
   }
 
@@ -63,6 +66,15 @@ class _HomePageState extends State<HomePage> {
   }
 
   String? get _myUid => B2CAuthService.instance.currentUser?.uid;
+
+  Future<void> _fetchProfile() async {
+    final uid = _myUid;
+    if (uid == null) return;
+    final profile = await ProfileService().getProfile(uid);
+    if (mounted && profile != null) {
+      setState(() => _photoUrl = profile['photo_url'] as String?);
+    }
+  }
 
   List<SkillSearchResult> _excludeSelf(List<SkillSearchResult> results) {
     final uid = _myUid;
@@ -212,7 +224,7 @@ class _HomePageState extends State<HomePage> {
             Expanded(
               child: Column(
                 children: [
-                  _TopBar(onSearch: (q) => _handleSearch(q), unreadCount: _unreadNotifCount),
+                  _TopBar(onSearch: (q) => _handleSearch(q), unreadCount: _unreadNotifCount, photoUrl: _photoUrl),
                   if (_loadingSearch)
                     const LinearProgressIndicator(minHeight: 3),
                   Expanded(
@@ -1079,10 +1091,11 @@ class _SkillRequestDialogState extends State<_SkillRequestDialog> {
 }
 
 class _TopBar extends StatelessWidget implements PreferredSizeWidget {
-  const _TopBar({this.onSearch, this.unreadCount = 0});
+  const _TopBar({this.onSearch, this.unreadCount = 0, this.photoUrl});
 
   final ValueChanged<String>? onSearch;
   final int unreadCount;
+  final String? photoUrl;
 
   @override
   Size get preferredSize => const Size.fromHeight(64);
@@ -1170,6 +1183,24 @@ class _TopBar extends StatelessWidget implements PreferredSizeWidget {
                 (route) => false,
               );
             },
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: HomePage.surface,
+              backgroundImage: photoUrl != null && photoUrl!.isNotEmpty
+                  ? NetworkImage(photoUrl!)
+                  : null,
+              child: photoUrl == null || photoUrl!.isEmpty
+                  ? const Icon(HugeIcons.strokeRoundedUser, size: 18, color: HomePage.textMuted)
+                  : null,
+            ),
           ),
         ],
       ),
