@@ -307,7 +307,7 @@ class SkillsSearchService:
                 searchable=True,
                 filterable=True,
             ),
-            SearchableField(name="poster_name", type=SearchFieldDataType.String),
+            SimpleField(name="poster_name", type=SearchFieldDataType.String),
             SimpleField(name="poster_city", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="poster_swap_credits", type=SearchFieldDataType.Int32, sortable=True),
             SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
@@ -390,9 +390,8 @@ class SkillsSearchService:
         limit: int = 10,
         category_filter: Optional[str] = None,
         score_threshold: float = 0.3,
-        query_text: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Search skills by vector similarity with optional category filter and text search."""
+        """Search skills by vector similarity with optional category filter."""
         vector_query = VectorizedQuery(
             vector=query_vec,
             k_nearest_neighbors=limit,
@@ -404,7 +403,7 @@ class SkillsSearchService:
             filter_expr = f"tolower(category) eq '{category_filter.lower()}'"
 
         results = self.search_client.search(
-            search_text=query_text,
+            search_text=None,
             vector_queries=[vector_query],
             filter=filter_expr,
             top=limit,
