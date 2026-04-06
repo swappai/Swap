@@ -47,7 +47,10 @@ class AzureSearchService:
 
     def _ensure_index(self):
         """Create or update the index to ensure all fields exist."""
-        self._create_or_update_index()
+        try:
+            self._create_or_update_index()
+        except Exception as e:
+            logger.warning(f"Profile index update skipped (index likely exists): {e}")
 
     def _create_or_update_index(self):
         """Create or update the search index with all fields."""
@@ -291,6 +294,12 @@ class SkillsSearchService:
         self._ensure_index()
 
     def _ensure_index(self):
+        try:
+            self._create_or_update_index()
+        except Exception as e:
+            logger.warning(f"Skills index update skipped (index likely exists): {e}")
+
+    def _create_or_update_index(self):
         fields = [
             SimpleField(name="id", type=SearchFieldDataType.String, key=True),
             SimpleField(name="skill_id", type=SearchFieldDataType.String, filterable=True),
