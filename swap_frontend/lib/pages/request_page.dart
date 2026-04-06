@@ -6,7 +6,6 @@ import '../models/swap_request.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/swap_request_service.dart';
 import '../services/messaging_service.dart';
-import '../models/conversation.dart';
 import '../widgets/app_sidebar.dart';
 import 'home_page.dart';
 import 'messages/chat_page.dart';

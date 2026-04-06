@@ -51,16 +51,10 @@ class _AppSidebarState extends State<AppSidebar> {
   }
 
   Future<void> _fetchPhoto() async {
-    final user = B2CAuthService.instance.currentUser;
-    if (user == null) return;
-    // Try local photo first
-    if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
-      if (mounted) setState(() => _photoUrl = user.photoUrl);
-      return;
-    }
-    // Fallback: fetch from profile service
+    final uid = B2CAuthService.instance.currentUser?.uid;
+    if (uid == null || uid.isEmpty) return;
     try {
-      final profile = await ProfileService().getProfile(user.uid);
+      final profile = await ProfileService().getProfile(uid);
       final url = profile?['photo_url'] as String?;
       if (mounted && url != null && url.isNotEmpty) {
         setState(() => _photoUrl = url);

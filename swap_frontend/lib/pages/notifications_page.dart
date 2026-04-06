@@ -43,14 +43,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     _load();
   }
 
-  Future<void> _markRead(AppNotification n) async {
-    if (n.isRead) return;
-    final uid = B2CAuthService.instance.currentUser?.uid;
-    if (uid == null) return;
-    await _service.markRead(n.id, uid);
-    _load();
-  }
-
   Future<void> _handleTap(AppNotification n) async {
     final uid = B2CAuthService.instance.currentUser?.uid;
     if (uid == null) return;
