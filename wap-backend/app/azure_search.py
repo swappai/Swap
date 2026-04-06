@@ -419,8 +419,8 @@ class SkillsSearchService:
                     "poster_average_rating": result.get("poster_average_rating", 0),
                     "poster_review_count": result.get("poster_review_count", 0),
                     "poster_account_type": result.get("poster_account_type") or "person",
-                    "poster_photo_url": result.get("poster_photo_url", ""),
-                    "swap_for": result.get("swap_for", ""),
+                    "poster_photo_url": result.get("poster_photo_url") or "",
+                    "swap_for": result.get("swap_for") or "",
                     "score": score,
                 })
 
