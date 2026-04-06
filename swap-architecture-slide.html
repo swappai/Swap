@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How Does $wap Work?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg-darkest: #0A0A0B;
+    --bg-dark: #0D0D0D;
+    --bg-card: #0F1115;
+    --bg-card-alt: #12141B;
+    --bg-surface: #1A1333;
+    --purple-primary: #7C3AED;
+    --purple-light: #9F67FF;
+    --purple-soft: #2D1B69;
+    --purple-gradient-1: #6C63FF;
+    --purple-gradient-2: #7A00FF;
+    --purple-gradient-3: #9E00FF;
+    --text-primary: #EAEAF2;
+    --text-muted: #B6BDD0;
+    --text-dim: #6B7394;
+    --line: #1F2937;
+    --accent: #7C3AED;
+    --shadow: 0 4px 24px rgba(124, 58, 237, 0.1);
+    --shadow-hover: 0 8px 32px rgba(124, 58, 237, 0.2);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg-darkest);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    overflow: hidden;
+  }
+
+  .slide {
+    width: 1280px;
+    height: 720px;
+    background: var(--bg-dark);
+    position: relative;
+    overflow: hidden;
+    border-radius: 8px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .slide::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(124, 58, 237, 0.06) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 30%, rgba(108, 99, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, rgba(159, 103, 255, 0.04) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .slide::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124, 58, 237, 0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124, 58, 237, 0.04) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .header {
+    background: linear-gradient(135deg, var(--bg-surface) 0%, var(--purple-soft) 50%, #1e1145 100%);
+    padding: 18px 48px;
+    position: relative;
+    z-index: 2;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--purple-gradient-1), var(--purple-primary), var(--purple-gradient-3));
+  }
+
+  .header h1 {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 32px;
+    color: var(--text-primary);
+    letter-spacing: -0.5px;
+  }
+
+  .header h1 span.dollar {
+    color: var(--purple-light);
+    font-weight: 800;
+  }
+
+  .content {
+    position: relative;
+    z-index: 1;
+    padding: 28px 40px 20px;
+    height: calc(100% - 72px);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* SVG arrows layer — sized to match .content */
+  .arrows-layer {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .flow-area {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    position: relative;
+  }
+
+  /* Personas */
+  .personas {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    z-index: 1;
+    flex-shrink: 0;
+    width: 160px;
+  }
+
+  .persona {
+    text-align: center;
+    opacity: 0;
+    animation: fadeSlideRight 0.6s ease forwards;
+  }
+  .persona:nth-child(2) { animation-delay: 0.15s; }
+
+  .persona-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    margin: 0 auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    position: relative;
+  }
+
+  .persona-avatar.poster {
+    background: linear-gradient(135deg, var(--purple-primary), var(--purple-light));
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.35);
+  }
+
+  .persona-avatar.seeker {
+    background: linear-gradient(135deg, var(--purple-gradient-1), var(--purple-gradient-3));
+    box-shadow: 0 4px 16px rgba(108, 99, 255, 0.35);
+  }
+
+  .persona-label {
+    font-weight: 600;
+    font-size: 12px;
+    color: var(--purple-light);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .persona-quote {
+    font-size: 11px;
+    color: var(--text-muted);
+    font-style: italic;
+    line-height: 1.4;
+    max-width: 140px;
+    margin: 0 auto;
+  }
+
+  /* Service flow */
+  .services-flow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 1;
+    flex: 1;
+    justify-content: center;
+    padding: 0 16px;
+  }
+
+  .service-node {
+    background: var(--bg-card);
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 14px;
+    padding: 18px 16px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    position: relative;
+    opacity: 0;
+    animation: fadeScaleIn 0.5s ease forwards;
+    backdrop-filter: blur(8px);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    width: 155px;
+  }
+
+  .service-node:hover {
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-2px);
+  }
+
+  .service-node:nth-child(1) { animation-delay: 0.3s; }
+  .service-node:nth-child(3) { animation-delay: 0.5s; }
+  .service-node:nth-child(5) { animation-delay: 0.7s; }
+
+  .service-icon {
+    width: 44px;
+    height: 44px;
+    margin: 0 auto 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .service-icon img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .service-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    line-height: 1.3;
+  }
+
+  .service-subtitle {
+    font-size: 10px;
+    color: var(--text-dim);
+    line-height: 1.4;
+    font-weight: 400;
+  }
+
+  /* Inline arrow connectors between service nodes */
+  .arrow-connector {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    opacity: 0;
+    animation: fadeIn 0.4s ease forwards;
+  }
+  .arrow-connector:nth-of-type(2) { animation-delay: 0.4s; }
+  .arrow-connector:nth-of-type(4) { animation-delay: 0.6s; }
+  .arrow-connector svg { width: 36px; height: 20px; }
+
+  /* Info panel */
+  .info-panel {
+    flex-shrink: 0;
+    width: 220px;
+    z-index: 1;
+    opacity: 0;
+    animation: fadeSlideLeft 0.6s ease forwards;
+    animation-delay: 0.9s;
+  }
+
+  .info-card {
+    background: var(--bg-surface);
+    border: 1px solid rgba(124, 58, 237, 0.2);
+    border-radius: 14px;
+    padding: 22px 20px;
+    color: var(--text-primary);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .info-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--purple-gradient-1), var(--purple-primary), var(--purple-gradient-3));
+  }
+
+  .info-title {
+    font-family: 'Playfair Display', serif;
+    font-weight: 700;
+    font-size: 16px;
+    margin-bottom: 14px;
+    color: var(--text-primary);
+  }
+
+  .info-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .info-list li {
+    font-size: 11.5px;
+    color: var(--text-muted);
+    line-height: 1.5;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .info-list li::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 6px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--purple-light);
+  }
+
+  /* Infra strip */
+  .infra-strip {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+    margin-top: 16px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .infra-strip::before {
+    content: 'SUPPORTING INFRASTRUCTURE';
+    position: absolute;
+    top: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-dark);
+    padding: 0 12px;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+  }
+
+  .infra-node {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-card);
+    border: 1px solid rgba(124, 58, 237, 0.1);
+    border-radius: 10px;
+    padding: 10px 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
+    opacity: 0;
+    animation: fadeSlideUp 0.5s ease forwards;
+  }
+  .infra-node:nth-child(1) { animation-delay: 1.0s; }
+  .infra-node:nth-child(2) { animation-delay: 1.1s; }
+
+  .infra-icon {
+    width: 32px; height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .infra-icon img { width: 100%; height: 100%; object-fit: contain; }
+
+  .infra-text .infra-name { font-weight: 600; font-size: 12px; color: var(--text-primary); }
+  .infra-text .infra-desc { font-size: 10px; color: var(--text-dim); }
+
+  /* Match badge */
+  .match-badge {
+    position: absolute;
+    background: linear-gradient(135deg, var(--purple-gradient-1), var(--purple-primary));
+    color: #fff;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+    box-shadow: 0 4px 16px rgba(124, 58, 237, 0.4);
+    opacity: 0;
+    animation: matchPulse 0.6s ease forwards;
+    animation-delay: 1.4s;
+    z-index: 5;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .match-badge::before { content: '✓ '; }
+
+  .step-number {
+    position: absolute;
+    top: -6px; left: -6px;
+    width: 20px; height: 20px;
+    background: var(--purple-primary);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  /* Animated dashes */
+  .flow-path {
+    stroke-dasharray: 8 4;
+    animation: dashFlow 1.5s linear infinite;
+  }
+  @keyframes dashFlow { to { stroke-dashoffset: -24; } }
+
+  .return-path {
+    stroke-dasharray: 6 4;
+    animation: dashFlowReverse 2s linear infinite;
+  }
+  @keyframes dashFlowReverse { to { stroke-dashoffset: 20; } }
+
+  @keyframes fadeSlideRight {
+    from { opacity: 0; transform: translateX(-20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeSlideLeft {
+    from { opacity: 0; transform: translateX(20px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(15px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeScaleIn {
+    from { opacity: 0; transform: scale(0.9); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes matchPulse {
+    0%   { opacity: 0; transform: scale(0.8); }
+    60%  { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+</style>
+</head>
+<body>
+
+<div class="slide">
+  <div class="header">
+    <h1>How Does <span class="dollar">$</span>wap Work?</h1>
+  </div>
+
+  <div class="content" id="content">
+    <!-- SVG arrows drawn by JS -->
+    <svg class="arrows-layer" id="arrows" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arrowBrown" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="#9F67FF"/>
+        </marker>
+        <marker id="arrowGold" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M 0 1 L 8 5 L 0 9 z" fill="#7C3AED"/>
+        </marker>
+      </defs>
+    </svg>
+
+    <div class="flow-area">
+      <!-- Left: Personas -->
+      <div class="personas">
+        <div class="persona" id="poster">
+          <div class="persona-avatar poster">👩‍🎨</div>
+          <div class="persona-label">Skill Poster</div>
+          <div class="persona-quote">"I teach graphic design for small businesses"</div>
+        </div>
+        <div class="persona" id="seeker">
+          <div class="persona-avatar seeker">🔍</div>
+          <div class="persona-label">Skill Seeker</div>
+          <div class="persona-quote">"I need help with a logo"</div>
+        </div>
+      </div>
+
+      <!-- Center: Service Flow -->
+      <div class="services-flow">
+        <div class="service-node" id="node1">
+          <span class="step-number">1</span>
+          <div class="service-icon"><img src="https://az-icons.com/export/icons/ce8c231e0aac956666abed4c3e6963a2.svg" alt="Azure App Service"/></div>
+          <div class="service-name">Azure App Service</div>
+          <div class="service-subtitle">FastAPI Backend Hub</div>
+        </div>
+
+        <div class="arrow-connector">
+          <svg viewBox="0 0 36 20"><path d="M4 10 L28 10 M24 5 L30 10 L24 15" stroke="#9F67FF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <div class="service-node" id="node2">
+          <span class="step-number">2</span>
+          <div class="service-icon"><img src="https://az-icons.com/export/icons/bdba2064be58a6b30881bfaddcf6e29d.svg" alt="Azure AI Foundry"/></div>
+          <div class="service-name">Azure AI Foundry</div>
+          <div class="service-subtitle">Semantic understanding via text-embedding-3-large</div>
+        </div>
+
+        <div class="arrow-connector">
+          <svg viewBox="0 0 36 20"><path d="M4 10 L28 10 M24 5 L30 10 L24 15" stroke="#9F67FF" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+
+        <div class="service-node" id="node3">
+          <span class="step-number">3</span>
+          <div class="service-icon"><img src="https://az-icons.com/export/icons/0d1430225c8904846d5b5c0e5b410823.svg" alt="Azure AI Search"/></div>
+          <div class="service-name">Azure AI Search</div>
+          <div class="service-subtitle">Vector skill matching & discovery</div>
+        </div>
+      </div>
+
+      <!-- Right: Info Panel -->
+      <div class="info-panel">
+        <div class="info-card">
+          <div class="info-title">Intelligent Matching</div>
+          <ul class="info-list">
+            <li>Understands meaning, not just keywords</li>
+            <li>Matches skills even with zero word overlap</li>
+            <li>Gets smarter as the community grows</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Match badge — positioned by JS -->
+      <div class="match-badge" id="matchBadge">Match Found</div>
+    </div>
+
+    <!-- Bottom: Infrastructure -->
+    <div class="infra-strip">
+      <div class="infra-node">
+        <div class="infra-icon"><img src="https://az-icons.com/export/icons/395e1f421234e56a7c504141379cf846.svg" alt="Azure Cosmos DB"/></div>
+        <div class="infra-text">
+          <div class="infra-name">Azure Cosmos DB</div>
+          <div class="infra-desc">Profiles, Skills & Messages</div>
+        </div>
+      </div>
+      <div class="infra-node">
+        <div class="infra-icon"><img src="https://az-icons.com/export/icons/675ad8e4daebee40114a4fe36033257c.svg" alt="Azure Blob Storage"/></div>
+        <div class="infra-text">
+          <div class="infra-name">Azure Blob Storage</div>
+          <div class="infra-desc">Photos & Portfolios</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Draw arrows based on actual element positions
+function drawArrows() {
+  const content = document.getElementById('content');
+  const svg = document.getElementById('arrows');
+  const cRect = content.getBoundingClientRect();
+
+  // Helper: get center point of an element relative to .content
+  function center(el) {
+    const r = el.getBoundingClientRect();
+    return {
+      x: r.left + r.width / 2 - cRect.left,
+      y: r.top + r.height / 2 - cRect.top
+    };
+  }
+  // Helper: get edge point
+  function rightEdge(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.right - cRect.left, y: r.top + r.height / 2 - cRect.top };
+  }
+  function leftEdge(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left - cRect.left, y: r.top + r.height / 2 - cRect.top };
+  }
+  function bottomEdge(el) {
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2 - cRect.left, y: r.bottom - cRect.top };
+  }
+
+  const poster = document.getElementById('poster');
+  const seeker = document.getElementById('seeker');
+  const node1 = document.getElementById('node1');
+  const node3 = document.getElementById('node3');
+  const badge = document.getElementById('matchBadge');
+
+  const p1 = rightEdge(poster);
+  const p2 = rightEdge(seeker);
+  const n1L = leftEdge(node1);
+  const n3R = rightEdge(node3);
+  const n3B = bottomEdge(node3);
+
+  // Clear previous paths (keep defs)
+  svg.querySelectorAll('path').forEach(p => p.remove());
+
+  // Poster → Node1
+  const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const mid1x = (p1.x + n1L.x) / 2;
+  path1.setAttribute('d', `M ${p1.x} ${p1.y} C ${mid1x} ${p1.y}, ${mid1x} ${n1L.y}, ${n1L.x - 4} ${n1L.y}`);
+  path1.setAttribute('stroke', '#9F67FF');
+  path1.setAttribute('stroke-width', '2');
+  path1.setAttribute('fill', 'none');
+  path1.setAttribute('opacity', '0.6');
+  path1.setAttribute('marker-end', 'url(#arrowBrown)');
+  path1.classList.add('flow-path');
+  svg.appendChild(path1);
+
+  // Seeker → Node1
+  const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const mid2x = (p2.x + n1L.x) / 2;
+  path2.setAttribute('d', `M ${p2.x} ${p2.y} C ${mid2x} ${p2.y}, ${mid2x} ${n1L.y}, ${n1L.x - 4} ${n1L.y}`);
+  path2.setAttribute('stroke', '#7C3AED');
+  path2.setAttribute('stroke-width', '2');
+  path2.setAttribute('fill', 'none');
+  path2.setAttribute('opacity', '0.6');
+  path2.setAttribute('marker-end', 'url(#arrowGold)');
+  path2.classList.add('flow-path');
+  svg.appendChild(path2);
+
+  // Return path: Node3 bottom → curves back down to seeker
+  const seekerBottom = bottomEdge(seeker);
+  const path3 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  const returnY = Math.max(n3B.y, seekerBottom.y) + 40;
+  path3.setAttribute('d', `M ${n3B.x} ${n3B.y} C ${n3B.x} ${returnY}, ${seekerBottom.x} ${returnY}, ${seekerBottom.x} ${seekerBottom.y + 4}`);
+  path3.setAttribute('stroke', '#7C3AED');
+  path3.setAttribute('stroke-width', '1.8');
+  path3.setAttribute('fill', 'none');
+  path3.setAttribute('opacity', '0.4');
+  path3.setAttribute('marker-end', 'url(#arrowGold)');
+  path3.classList.add('return-path');
+  svg.appendChild(path3);
+
+  // Position match badge at the midpoint of the return path
+  const badgeMidX = (n3B.x + seekerBottom.x) / 2;
+  badge.style.left = (badgeMidX - 45) + 'px';
+  badge.style.top = (returnY - 12) + 'px';
+  badge.style.bottom = 'auto';
+}
+
+// Run after layout + images
+window.addEventListener('load', () => {
+  setTimeout(drawArrows, 100);
+});
+window.addEventListener('resize', drawArrows);
+</script>
+
+</body>
+</html>

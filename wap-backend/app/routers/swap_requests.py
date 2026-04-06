@@ -567,19 +567,34 @@ def admin_purge_swap_request(request_id: str):
     # Delete conversation and messages if present
     conversation_id = swap.get("conversation_id")
     if conversation_id:
-        summary["messages_deleted"] = cosmos.delete_messages_for_conversation(
-            conversation_id
-        )
+        try:
+            summary["messages_deleted"] = cosmos.delete_messages_for_conversation(
+                conversation_id
+            )
+        except (AttributeError, Exception):
+            pass
         try:
             cosmos.delete_conversation(conversation_id)
             summary["conversation_deleted"] = True
-        except Exception:
-            pass  # conversation may not exist
+        except (AttributeError, Exception):
+            pass
 
     # Delete notifications referencing this swap
-    summary["notifications_deleted"] = cosmos.delete_notifications_for_swap(request_id)
+    try:
+        summary["notifications_deleted"] = cosmos.delete_notifications_for_swap(request_id)
+    except (AttributeError, Exception):
+        pass
 
     # Delete the swap request itself
-    cosmos.delete_swap_request(request_id, swap["uid"])
+    try:
+        cosmos.delete_swap_request(request_id, swap["uid"])
+    except AttributeError:
+        # Fallback: delete directly from container
+        try:
+            cosmos._container("swap_requests").delete_item(
+                item=request_id, partition_key=swap["uid"]
+            )
+        except Exception:
+            pass
 
     return summary

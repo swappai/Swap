@@ -74,6 +74,13 @@ jobs:
       - name: Create deployment package
         run: zip -r ../backend.zip . -x ".git/*" "__pycache__/*" "*.pyc" ".env" "tests/*"
 
+      - name: Clear stale Oryx build cache
+        run: |
+          az rest --method POST \
+            --uri "https://${{ env.APP_SERVICE_NAME }}.scm.azurewebsites.net/api/command" \
+            --body '{"command":"rm -f /home/site/wwwroot/output.tar.zst /home/site/wwwroot/oryx-manifest.toml"}' \
+            --resource "https://management.azure.com" || true
+
       - name: Deploy to App Service (Kudu ZIP deploy with Oryx build)
         run: |
           az webapp deployment source config-zip \
@@ -81,9 +88,15 @@ jobs:
             --name ${{ env.APP_SERVICE_NAME }} \
             --src ../backend.zip
 
+      - name: Restart app container
+        run: |
+          az webapp stop --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+          sleep 10
+          az webapp start --name ${{ env.APP_SERVICE_NAME }} --resource-group ${{ env.RESOURCE_GROUP }}
+
       - name: Smoke test
         run: |
-          sleep 60
+          sleep 90
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             https://${{ env.APP_SERVICE_NAME }}.azurewebsites.net/healthz)
           echo "Health check returned: $STATUS"
