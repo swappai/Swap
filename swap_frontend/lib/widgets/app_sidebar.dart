@@ -12,6 +12,7 @@ import '../pages/wallet_page.dart';
 import '../pages/messages/conversations_page.dart';
 import '../services/b2c_auth_service.dart';
 import '../services/messaging_service.dart';
+import '../services/profile_service.dart';
 
 class AppSidebar extends StatefulWidget {
   const AppSidebar({super.key, this.active = 'Home'});
@@ -27,11 +28,13 @@ class AppSidebar extends StatefulWidget {
 class _AppSidebarState extends State<AppSidebar> {
   final _messagingService = MessagingService();
   int _unreadCount = 0;
+  String? _photoUrl;
 
   @override
   void initState() {
     super.initState();
     _fetchUnreadCount();
+    _fetchPhoto();
   }
 
   Future<void> _fetchUnreadCount() async {
@@ -45,6 +48,24 @@ class _AppSidebarState extends State<AppSidebar> {
     } catch (e) {
       debugPrint('Error fetching unread count: $e');
     }
+  }
+
+  Future<void> _fetchPhoto() async {
+    final user = B2CAuthService.instance.currentUser;
+    if (user == null) return;
+    // Try local photo first
+    if (user.photoUrl != null && user.photoUrl!.isNotEmpty) {
+      if (mounted) setState(() => _photoUrl = user.photoUrl);
+      return;
+    }
+    // Fallback: fetch from profile service
+    try {
+      final profile = await ProfileService().getProfile(user.uid);
+      final url = profile?['photo_url'] as String?;
+      if (mounted && url != null && url.isNotEmpty) {
+        setState(() => _photoUrl = url);
+      }
+    } catch (_) {}
   }
 
   @override
@@ -138,6 +159,7 @@ class _AppSidebarState extends State<AppSidebar> {
             icon: HugeIcons.strokeRoundedUser,
             label: 'Profile',
             active: isActive('Profile'),
+            photoUrl: _photoUrl,
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const ProfilePage())),
@@ -168,6 +190,7 @@ class _NavItem extends StatelessWidget {
     required this.label,
     this.active = false,
     this.badge,
+    this.photoUrl,
     this.onTap,
   });
 
@@ -175,10 +198,35 @@ class _NavItem extends StatelessWidget {
   final String label;
   final bool active;
   final String? badge;
+  final String? photoUrl;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    Widget leadingWidget;
+    if (photoUrl != null && photoUrl!.isNotEmpty) {
+      leadingWidget = Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: active ? HomePage.accentAlt : HomePage.textMuted.withValues(alpha: 0.4),
+            width: 2,
+          ),
+          image: DecorationImage(
+            image: NetworkImage(photoUrl!),
+            fit: BoxFit.cover,
+          ),
+        ),
+      );
+    } else {
+      leadingWidget = Icon(
+        icon,
+        color: active ? HomePage.accentAlt : HomePage.textMuted,
+      );
+    }
+
     return Container(
       margin: const EdgeInsets.fromLTRB(10, 6, 10, 6),
       decoration: BoxDecoration(
@@ -186,10 +234,7 @@ class _NavItem extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: ListTile(
-        leading: Icon(
-          icon,
-          color: active ? HomePage.accentAlt : HomePage.textMuted,
-        ),
+        leading: leadingWidget,
         title: Text(
           label,
           style: TextStyle(
