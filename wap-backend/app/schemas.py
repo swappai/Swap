@@ -289,7 +289,20 @@ class ConversationStatus(str, Enum):
 class MessageCreate(BaseModel):
     """Schema for sending a message."""
 
-    content: str = Field(..., min_length=1, max_length=5000, description="Message content")
+    content: str = Field("", max_length=5000, description="Message content")
+    attachment_url: Optional[str] = Field(None, description="URL of an attached image")
+
+    @property
+    def has_content(self) -> bool:
+        return bool(self.content.strip()) or bool(self.attachment_url)
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "content": "Check out this photo!",
+                "attachment_url": "https://example.com/image.jpg",
+            }
+        }
 
 
 class MessageResponse(BaseModel):
@@ -304,6 +317,7 @@ class MessageResponse(BaseModel):
     read_at: Optional[datetime] = None
     read_by: List[str] = Field(default_factory=list)
     type: MessageType = MessageType.text
+    attachment_url: Optional[str] = None
 
 
 class LastMessage(BaseModel):

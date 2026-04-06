@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
 import '../config.dart';
 import '../models/conversation.dart';
@@ -123,23 +124,59 @@ class MessagingService {
         .toList();
   }
 
+  /// Upload an image attachment and return the blob URL.
+  Future<String> uploadAttachment(
+    String conversationId,
+    String uid,
+    List<int> bytes,
+    String filename,
+  ) async {
+    final uri = Uri.parse('$baseUrl/conversations/$conversationId/attachments')
+        .replace(queryParameters: {'uid': uid});
+
+    debugPrint('MessagingService: POST attachment $uri');
+
+    final ext = filename.split('.').last.toLowerCase();
+    final request = http.MultipartRequest('POST', uri)
+      ..files.add(http.MultipartFile.fromBytes(
+        'file',
+        bytes,
+        filename: filename,
+        contentType: MediaType('image', ext == 'jpg' ? 'jpeg' : ext),
+      ));
+
+    final streamed = await request.send().timeout(const Duration(seconds: 60));
+    final resp = await http.Response.fromStream(streamed);
+    if (resp.statusCode != 200) {
+      throw Exception('Attachment upload failed: ${resp.statusCode} ${resp.body}');
+    }
+    final data = jsonDecode(resp.body) as Map<String, dynamic>;
+    return data['attachment_url'] as String;
+  }
+
   /// Send a message in a conversation.
   Future<Message> sendMessage(
     String conversationId,
     String uid,
-    String content,
-  ) async {
+    String content, {
+    String? attachmentUrl,
+  }) async {
     final uri = Uri.parse('$baseUrl/conversations/$conversationId/messages')
         .replace(queryParameters: {'uid': uid});
 
     debugPrint('MessagingService: POST $uri');
+
+    final body = <String, dynamic>{'content': content};
+    if (attachmentUrl != null) {
+      body['attachment_url'] = attachmentUrl;
+    }
 
     final headers = await _getHeaders();
     final response = await http
         .post(
           uri,
           headers: headers,
-          body: jsonEncode({'content': content}),
+          body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 15));
 

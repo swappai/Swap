@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 
 import '../../config.dart';
 import '../home_page.dart';
@@ -36,6 +37,12 @@ class _ChatPageState extends State<ChatPage> {
   bool _sending = false;
   String? _error;
   Timer? _pollTimer;
+
+  // Image attachment state
+  final _imagePicker = ImagePicker();
+  Uint8List? _pendingImageBytes;
+  String? _pendingImageFilename;
+  bool _uploading = false;
 
   // Swap request tracking for completion banner
   SwapRequest? _swapRequest;
@@ -138,23 +145,72 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
+  Future<void> _pickImage() async {
+    try {
+      final picked = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
+      if (picked == null) return;
+
+      final bytes = await picked.readAsBytes();
+      if (mounted) {
+        setState(() {
+          _pendingImageBytes = bytes;
+          _pendingImageFilename = picked.name;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error picking image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to pick image: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
-    if (content.isEmpty || _sending) return;
+    final hasImage = _pendingImageBytes != null;
+    if (content.isEmpty && !hasImage) return;
+    if (_sending || _uploading) return;
 
     setState(() => _sending = true);
 
     try {
+      String? attachmentUrl;
+
+      // Upload image first if present
+      if (hasImage) {
+        setState(() => _uploading = true);
+        attachmentUrl = await _messagingService.uploadAttachment(
+          widget.conversation.id,
+          _currentUid,
+          _pendingImageBytes!,
+          _pendingImageFilename ?? 'image.jpg',
+        );
+        if (mounted) setState(() => _uploading = false);
+      }
+
       final message = await _messagingService.sendMessage(
         widget.conversation.id,
         _currentUid,
         content,
+        attachmentUrl: attachmentUrl,
       );
 
       if (mounted) {
         setState(() {
           _messages.add(message);
           _messageController.clear();
+          _pendingImageBytes = null;
+          _pendingImageFilename = null;
           _sending = false;
         });
         _scrollToBottom();
@@ -162,7 +218,10 @@ class _ChatPageState extends State<ChatPage> {
     } catch (e) {
       debugPrint('Error sending message: $e');
       if (mounted) {
-        setState(() => _sending = false);
+        setState(() {
+          _sending = false;
+          _uploading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to send message: $e'),
@@ -839,6 +898,13 @@ class _ChatPageState extends State<ChatPage> {
             controller: _messageController,
             onSend: _sendMessage,
             sending: _sending,
+            onAttachment: _pickImage,
+            pendingImageBytes: _pendingImageBytes,
+            onRemovePendingImage: () => setState(() {
+              _pendingImageBytes = null;
+              _pendingImageFilename = null;
+            }),
+            uploading: _uploading,
           ),
         ],
       ),

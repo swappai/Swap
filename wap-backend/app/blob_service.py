@@ -40,6 +40,21 @@ class BlobService:
         )
         return f"{self._client.url}{self._container_name}/{blob_name}"
 
+    def upload_chat_attachment(
+        self, conversation_id: str, sender_uid: str, file_bytes: bytes, content_type: str
+    ) -> str:
+        """Upload a chat image attachment and return its public URL."""
+        ext = _ext_from_content_type(content_type)
+        blob_name = f"messages/{conversation_id}/{uuid.uuid4().hex}{ext}"
+        container_client = self._client.get_container_client(self._container_name)
+        container_client.upload_blob(
+            name=blob_name,
+            data=file_bytes,
+            overwrite=True,
+            content_settings=ContentSettings(content_type=content_type),
+        )
+        return f"{self._client.url}{self._container_name}/{blob_name}"
+
     def delete_profile_photo(self, uid: str) -> None:
         """Delete all profile photos for a user."""
         container_client = self._client.get_container_client(self._container_name)

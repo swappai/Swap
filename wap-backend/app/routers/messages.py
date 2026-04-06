@@ -2,7 +2,7 @@
 
 from typing import Optional, List
 from datetime import datetime
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, UploadFile, File
 
 from app.schemas import (
     MessageCreate,
@@ -17,7 +17,11 @@ from app.schemas import (
 )
 from app.cosmos_db import get_cosmos_service
 from app.email_service import get_email_service
+from app.blob_service import get_blob_service
 from app.cache import get_cache_service
+
+_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+_MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024  # 10 MB
 
 router = APIRouter(prefix="/conversations", tags=["messaging"])
 
@@ -186,9 +190,51 @@ def get_messages(
             read_at=_convert_timestamp(m.get("read_at")),
             read_by=m.get("read_by", []),
             type=MessageType(m.get("type", "text")),
+            attachment_url=m.get("attachment_url"),
         )
         for m in messages
     ]
+
+
+@router.post("/{conversation_id}/attachments")
+async def upload_attachment(
+    conversation_id: str,
+    uid: str = Query(..., description="UID of the sender"),
+    file: UploadFile = File(...),
+):
+    """
+    Upload an image attachment for a conversation message.
+
+    - Validates user is a participant
+    - Validates file type (jpg, png, gif, webp) and size (<=10MB)
+    - Returns the blob URL to include in a subsequent message
+    """
+    cosmos = get_cosmos_service()
+
+    conv = cosmos.get_conversation(conversation_id)
+    if not conv:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+    if uid not in conv.get("participant_uids", []):
+        raise HTTPException(status_code=403, detail="Not a participant in this conversation")
+
+    if file.content_type not in _ALLOWED_IMAGE_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file type: {file.content_type}. Allowed: jpg, png, gif, webp",
+        )
+
+    file_bytes = await file.read()
+    if len(file_bytes) > _MAX_ATTACHMENT_SIZE:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10 MB.")
+
+    blob_service = get_blob_service()
+    url = blob_service.upload_chat_attachment(
+        conversation_id=conversation_id,
+        sender_uid=uid,
+        file_bytes=file_bytes,
+        content_type=file.content_type,
+    )
+    return {"attachment_url": url}
 
 
 @router.post("/{conversation_id}/messages", response_model=MessageResponse)
@@ -219,6 +265,9 @@ def send_message(
     if conv.get("status") == ConversationStatus.blocked.value:
         raise HTTPException(status_code=403, detail="This conversation has been blocked")
 
+    if not message.has_content:
+        raise HTTPException(status_code=400, detail="Message must have content or an attachment")
+
     # Validate swap request is still accepted
     swap_request_id = conv.get("swap_request_id")
     if swap_request_id:
@@ -228,18 +277,29 @@ def send_message(
 
     now = datetime.utcnow().isoformat()
 
+    msg_data = {
+        "sender_uid": uid,
+        "content": message.content,
+        "sent_at": now,
+        "delivered_at": None,
+        "read_at": None,
+        "read_by": [uid],
+        "type": MessageType.text.value,
+    }
+    if message.attachment_url:
+        msg_data["attachment_url"] = message.attachment_url
+
     msg = cosmos.create_message(
         conversation_id=conversation_id,
-        data={
-            "sender_uid": uid,
-            "content": message.content,
-            "sent_at": now,
-            "delivered_at": None,
-            "read_at": None,
-            "read_by": [uid],
-            "type": MessageType.text.value,
-        },
+        data=msg_data,
     )
+
+    # Determine last_message preview text
+    has_text = bool(message.content.strip())
+    if has_text:
+        preview_text = message.content[:100]
+    else:
+        preview_text = "\U0001f4f7 Image"
 
     # Update conversation unread counts + last_message
     participant_uids = conv.get("participant_uids", [])
@@ -253,13 +313,20 @@ def send_message(
         conversation_id=conversation_id,
         update_data={
             "last_message": {
-                "content": message.content[:100],
+                "content": preview_text,
                 "sender_uid": uid,
                 "sent_at": now,
             },
             "unread_counts": unread_counts,
         },
     )
+
+    # Notification body
+    notification_body_suffix = "sent you a message"
+    email_preview = message.content[:100]
+    if not has_text and message.attachment_url:
+        notification_body_suffix = "sent you an image"
+        email_preview = "\U0001f4f7 Image"
 
     # Email notification to other participant
     if other_uid:
@@ -271,7 +338,7 @@ def send_message(
                 recipient_uid=other_uid,
                 recipient_name=other_profile.get("display_name", "there"),
                 sender_name=sender_profile.get("display_name", "Someone") if sender_profile else "Someone",
-                message_preview=message.content[:100],
+                message_preview=email_preview,
                 conversation_id=conversation_id,
             )
 
@@ -285,7 +352,7 @@ def send_message(
                 data={
                     "type": "new_message",
                     "title": "New Message",
-                    "body": f"{sender_name} sent you a message",
+                    "body": f"{sender_name} {notification_body_suffix}",
                     "sender_uid": uid,
                     "sender_name": sender_name,
                     "related_id": conversation_id,
@@ -304,6 +371,7 @@ def send_message(
         read_at=None,
         read_by=[uid],
         type=MessageType.text,
+        attachment_url=message.attachment_url,
     )
 
 
