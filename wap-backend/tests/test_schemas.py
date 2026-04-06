@@ -179,9 +179,13 @@ class TestMessageCreate:
         m = MessageCreate(content="Hello!")
         assert m.content == "Hello!"
 
-    def test_empty_content_raises(self):
-        with pytest.raises(ValidationError):
-            MessageCreate(content="")
+    def test_empty_content_allowed_with_attachment(self):
+        m = MessageCreate(content="", attachment_url="https://example.com/img.jpg")
+        assert m.has_content is True
+
+    def test_empty_content_no_attachment_has_no_content(self):
+        m = MessageCreate(content="")
+        assert m.has_content is False
 
     def test_content_too_long_raises(self):
         with pytest.raises(ValidationError):
@@ -191,9 +195,15 @@ class TestMessageCreate:
         m = MessageCreate(content="x" * 5000)
         assert len(m.content) == 5000
 
-    def test_missing_content_raises(self):
-        with pytest.raises(ValidationError):
-            MessageCreate()
+    def test_missing_content_defaults_to_empty(self):
+        m = MessageCreate()
+        assert m.content == ""
+        assert m.has_content is False
+
+    def test_attachment_url_only(self):
+        m = MessageCreate(attachment_url="https://example.com/photo.png")
+        assert m.has_content is True
+        assert m.content == ""
 
 
 # ── MessageType ───────────────────────────────────────────────────────────────

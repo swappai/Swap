@@ -40,6 +40,7 @@ def _install_azure_mocks():
         "azure.search.documents.models",
         "azure.identity",
         "azure.communication", "azure.communication.email",
+        "azure.storage", "azure.storage.blob",
     ]:
         parts = mod_path.split(".")
         obj = _azure
@@ -331,6 +332,7 @@ def client(store, mock_search_service, mock_embedding_service):
         patch("app.routers.profiles.get_email_service", return_value=MagicMock()),
         patch("app.routers.swap_requests.get_email_service", return_value=MagicMock()),
         patch("app.routers.messages.get_email_service", return_value=MagicMock()),
+        patch("app.routers.messages.get_blob_service", return_value=MagicMock()),
     ):
         from app.main import app
         yield TestClient(app, raise_server_exceptions=True)
