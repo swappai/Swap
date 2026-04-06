@@ -33,7 +33,10 @@ class MessageBubble extends StatelessWidget {
             constraints: BoxConstraints(
               maxWidth: MediaQuery.of(context).size.width * 0.7,
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: EdgeInsets.symmetric(
+              horizontal: (message.attachmentUrl != null && message.content.trim().isEmpty) ? 4 : 14,
+              vertical: (message.attachmentUrl != null && message.content.trim().isEmpty) ? 4 : 10,
+            ),
             decoration: BoxDecoration(
               color: isMe ? HomePage.accent : HomePage.surface,
               borderRadius: BorderRadius.only(
@@ -91,39 +94,42 @@ class MessageBubble extends StatelessWidget {
         onTap: () => _showFullscreenImage(context, message.attachmentUrl!),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(8),
-          child: Image.network(
-            message.attachmentUrl!,
-            width: double.infinity,
-            fit: BoxFit.cover,
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                width: double.infinity,
-                height: 150,
-                color: isMe
-                    ? Colors.white.withOpacity(0.1)
-                    : HomePage.surfaceAlt,
-                child: const Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 200),
+            child: Image.network(
+              message.attachmentUrl!,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: double.infinity,
+                  height: 150,
+                  color: isMe
+                      ? Colors.white.withOpacity(0.1)
+                      : HomePage.surfaceAlt,
+                  child: const Center(
+                    child: SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
                   ),
-                ),
-              );
-            },
-            errorBuilder: (context, error, stackTrace) {
-              return Container(
-                width: double.infinity,
-                height: 100,
-                color: isMe
-                    ? Colors.white.withOpacity(0.1)
-                    : HomePage.surfaceAlt,
-                child: const Center(
-                  child: Icon(Icons.broken_image, color: HomePage.textMuted),
-                ),
-              );
-            },
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: double.infinity,
+                  height: 100,
+                  color: isMe
+                      ? Colors.white.withOpacity(0.1)
+                      : HomePage.surfaceAlt,
+                  child: const Center(
+                    child: Icon(Icons.broken_image, color: HomePage.textMuted),
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
@@ -133,6 +139,7 @@ class MessageBubble extends StatelessWidget {
   static void _showFullscreenImage(BuildContext context, String url) {
     showDialog(
       context: context,
+      barrierColor: Colors.black87,
       builder: (ctx) => Dialog(
         backgroundColor: Colors.transparent,
         insetPadding: const EdgeInsets.all(16),
@@ -140,7 +147,10 @@ class MessageBubble extends StatelessWidget {
           children: [
             Center(
               child: InteractiveViewer(
-                child: Image.network(url),
+                child: Image.network(
+                  url,
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
             Positioned(
