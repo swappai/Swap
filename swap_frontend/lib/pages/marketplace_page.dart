@@ -372,7 +372,7 @@ class _DiscoverPaneState extends State<_DiscoverPane> {
                             crossAxisCount: crossAxisCount,
                             crossAxisSpacing: 18,
                             mainAxisSpacing: 18,
-                            mainAxisExtent: 310,
+                            mainAxisExtent: 340,
                           ),
                           itemCount: searchResults!.length,
                           itemBuilder: (context, i) {
@@ -600,12 +600,16 @@ class _SkillCard extends StatelessWidget {
                             : null,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        posterName,
-                        style: const TextStyle(
-                          color: HomePage.textPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          posterName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: HomePage.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -671,7 +675,7 @@ class _SkillCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       result.description,
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: HomePage.textMuted,
@@ -720,52 +724,59 @@ class _SkillCard extends StatelessWidget {
                       ),
                     ),
                   const SizedBox(height: 10),
-                  // Bottom row
-                  Row(
+                  // Attribute pills
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
                     children: [
                       _pill(result.difficulty, const Color(0xFFF59E0B)),
-                      const SizedBox(width: 8),
                       _pill(result.delivery, HomePage.textMuted),
-                      const SizedBox(width: 8),
                       _pill(
                         '${result.estimatedHours.toStringAsFixed(result.estimatedHours == result.estimatedHours.roundToDouble() ? 0 : 1)}h',
                         HomePage.textMuted,
                       ),
-                      if (result.posterCity.isNotEmpty) ...[
-                        const SizedBox(width: 8),
-                        const Icon(Icons.location_on_outlined,
-                            size: 12, color: HomePage.textMuted),
-                        const SizedBox(width: 2),
-                        Text(
-                          result.posterCity,
-                          style: const TextStyle(
-                            color: HomePage.textMuted,
-                            fontSize: 11,
-                          ),
-                        ),
-                      ],
-                      const Spacer(),
-                      SizedBox(
-                        height: 34,
-                        child: FilledButton.icon(
-                          onPressed: onRequest,
-                          icon: const Icon(
-                              HugeIcons.strokeRoundedArrowDataTransferHorizontal,
-                              size: 16),
-                          label: const Text('Request',
-                              style: TextStyle(fontSize: 13)),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: HomePage.accent,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
+                      if (result.posterCity.isNotEmpty)
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.location_on_outlined,
+                                size: 12, color: HomePage.textMuted),
+                            const SizedBox(width: 2),
+                            Text(
+                              result.posterCity,
+                              style: const TextStyle(
+                                color: HomePage.textMuted,
+                                fontSize: 11,
+                              ),
                             ),
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12),
+                          ],
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Request button
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: SizedBox(
+                      height: 34,
+                      child: FilledButton.icon(
+                        onPressed: onRequest,
+                        icon: const Icon(
+                            HugeIcons.strokeRoundedArrowDataTransferHorizontal,
+                            size: 16),
+                        label: const Text('Request',
+                            style: TextStyle(fontSize: 13)),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: HomePage.accent,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
                           ),
+                          padding:
+                              const EdgeInsets.symmetric(horizontal: 12),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),

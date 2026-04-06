@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 
 import '../../config.dart';
@@ -192,7 +193,44 @@ class _ChatPageState extends State<ChatPage> {
       case 'report':
         _showReportDialog();
         break;
+      case 'swap_id':
+        _showSwapIdDialog();
+        break;
     }
+  }
+
+  void _showSwapIdDialog() {
+    final swapId = widget.conversation.swapRequestId;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        backgroundColor: HomePage.surface,
+        title: const Text(
+          'Swap Request ID',
+          style: TextStyle(color: HomePage.textPrimary),
+        ),
+        content: SelectableText(
+          swapId,
+          style: const TextStyle(color: HomePage.textMuted, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: swapId));
+              Navigator.pop(dialogContext);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Swap ID copied to clipboard')),
+              );
+            },
+            child: const Text('Copy'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showBlockDialog() {
@@ -758,6 +796,17 @@ class _ChatPageState extends State<ChatPage> {
             icon: const Icon(Icons.more_vert, color: HomePage.textMuted),
             color: HomePage.surface,
             itemBuilder: (_) => [
+              if (widget.conversation.swapRequestId.isNotEmpty)
+                PopupMenuItem(
+                  value: 'swap_id',
+                  child: Row(
+                    children: [
+                      Icon(Icons.swap_horiz, color: HomePage.textMuted, size: 20),
+                      SizedBox(width: 8),
+                      Text('Swap ID', style: TextStyle(color: HomePage.textPrimary)),
+                    ],
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'block',
                 child: Row(

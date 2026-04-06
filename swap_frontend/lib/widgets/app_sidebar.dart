@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../pages/post_skill_page.dart';
-import '../pages/my_skills_page.dart';
 import '../pages/home_page.dart';
 import '../pages/marketplace_page.dart';
 import '../pages/landing_page.dart';
@@ -115,14 +114,6 @@ class _AppSidebarState extends State<AppSidebar> {
             onTap: () => Navigator.of(
               context,
             ).push(MaterialPageRoute(builder: (_) => const PostSkillPage())),
-          ),
-          _NavItem(
-            icon: HugeIcons.strokeRoundedTask01,
-            label: 'My Skills',
-            active: isActive('My Skills'),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const MySkillsPage()),
-            ),
           ),
           _NavItem(
             icon: HugeIcons.strokeRoundedInbox,

@@ -677,6 +677,50 @@ def _clean(doc: Dict[str, Any]) -> Dict[str, Any]:
     return {k: v for k, v in doc.items() if k not in cosmos_keys}
 
 
+    # ── Admin / Cascade Delete ──────────────────────────────────────────────────
+
+    def delete_swap_request(self, request_id: str, requester_uid: str) -> None:
+        """Delete a swap request document."""
+        self._container("swap_requests").delete_item(
+            item=request_id, partition_key=requester_uid
+        )
+
+    def delete_conversation(self, conversation_id: str) -> None:
+        """Delete a conversation document."""
+        self._container("conversations").delete_item(
+            item=conversation_id, partition_key=conversation_id
+        )
+
+    def delete_messages_for_conversation(self, conversation_id: str) -> int:
+        """Delete all messages in a conversation. Returns count deleted."""
+        container = self._container("messages")
+        items = list(
+            container.query_items(
+                query="SELECT c.id FROM c WHERE c.conversation_id = @cid",
+                parameters=[{"name": "@cid", "value": conversation_id}],
+                partition_key=conversation_id,
+            )
+        )
+        for item in items:
+            container.delete_item(item=item["id"], partition_key=conversation_id)
+        return len(items)
+
+    def delete_notifications_for_swap(self, request_id: str) -> int:
+        """Delete all notifications referencing a swap request. Returns count deleted."""
+        container = self._container("notifications")
+        items = list(
+            container.query_items(
+                query="SELECT c.id, c.recipient_uid FROM c WHERE c.related_id = @rid",
+                parameters=[{"name": "@rid", "value": request_id}],
+                enable_cross_partition_query=True,
+            )
+        )
+        for item in items:
+            container.delete_item(
+                item=item["id"], partition_key=item["recipient_uid"]
+            )
+        return len(items)
+
 # ── Singleton ─────────────────────────────────────────────────────────────────
 
 _cosmos_service: Optional[CosmosService] = None

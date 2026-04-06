@@ -150,10 +150,34 @@ def search_skills(request: SkillSearchRequest):
         query_vec=query_vec,
         limit=request.limit,
         category_filter=request.category,
+        query_text=request.query,
     )
 
     cache_service.set(cache_key, results, ttl=3600)
     return [SkillSearchResult(**r) for r in results]
+
+
+@router.post("/skills/admin/sync-poster-photos")
+def sync_poster_photos():
+    """One-time backfill: sync poster_photo_url from profiles to all skills in the index."""
+    cosmos_service = get_cosmos_service()
+    skills_search = get_skills_search_service()
+
+    # Get all profiles and sync their photo to skills index
+    profiles = cosmos_service.list_profiles(limit=10000)
+    updated = 0
+
+    for profile in profiles:
+        uid = profile.get("uid") or profile.get("id")
+        photo_url = profile.get("photo_url") or ""
+        if uid and photo_url:
+            try:
+                skills_search.update_poster_fields(uid, {"poster_photo_url": photo_url})
+                updated += 1
+            except Exception:
+                pass
+
+    return {"message": f"Synced poster photos for {updated} users", "updated": updated}
 
 
 class SkillRecommendationRequest(BaseModel):

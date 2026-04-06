@@ -203,10 +203,10 @@ class AzureSearchService:
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
                     "account_type": result.get("account_type") or "person",
-                    "swap_credits": result.get("swap_credits", 0),
-                    "swaps_completed": result.get("swaps_completed", 0),
-                    "average_rating": result.get("average_rating", 0),
-                    "review_count": result.get("review_count", 0),
+                    "swap_credits": result.get("swap_credits") or 0,
+                    "swaps_completed": result.get("swaps_completed") or 0,
+                    "average_rating": float(result.get("average_rating") or 0),
+                    "review_count": int(result.get("review_count") or 0),
                 })
 
         return matches
@@ -260,10 +260,10 @@ class AzureSearchService:
                     "dm_open": result.get("dm_open"),
                     "show_city": result.get("show_city"),
                     "account_type": result.get("account_type") or "person",
-                    "swap_credits": result.get("swap_credits", 0),
-                    "swaps_completed": result.get("swaps_completed", 0),
-                    "average_rating": result.get("average_rating", 0),
-                    "review_count": result.get("review_count", 0),
+                    "swap_credits": result.get("swap_credits") or 0,
+                    "swaps_completed": result.get("swaps_completed") or 0,
+                    "average_rating": float(result.get("average_rating") or 0),
+                    "review_count": int(result.get("review_count") or 0),
                 })
 
         return matches
@@ -307,7 +307,7 @@ class SkillsSearchService:
                 searchable=True,
                 filterable=True,
             ),
-            SimpleField(name="poster_name", type=SearchFieldDataType.String),
+            SearchableField(name="poster_name", type=SearchFieldDataType.String),
             SimpleField(name="poster_city", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="poster_swap_credits", type=SearchFieldDataType.Int32, sortable=True),
             SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
@@ -369,14 +369,30 @@ class SkillsSearchService:
         }
         self.search_client.merge_or_upload_documents([document])
 
+    def update_poster_fields(self, posted_by: str, fields: dict):
+        """Update denormalized poster fields on all skills by a given user."""
+        results = self.search_client.search(
+            search_text="*",
+            filter=f"posted_by eq '{posted_by}'",
+            select=["id"],
+            top=1000,
+        )
+        docs = []
+        for r in results:
+            doc = {"id": r["id"], **fields}
+            docs.append(doc)
+        if docs:
+            self.search_client.merge_documents(docs)
+
     def search_skills(
         self,
         query_vec: List[float],
         limit: int = 10,
         category_filter: Optional[str] = None,
         score_threshold: float = 0.3,
+        query_text: Optional[str] = None,
     ) -> List[Dict[str, Any]]:
-        """Search skills by vector similarity with optional category filter."""
+        """Search skills by vector similarity with optional category filter and text search."""
         vector_query = VectorizedQuery(
             vector=query_vec,
             k_nearest_neighbors=limit,
@@ -388,7 +404,7 @@ class SkillsSearchService:
             filter_expr = f"tolower(category) eq '{category_filter.lower()}'"
 
         results = self.search_client.search(
-            search_text=None,
+            search_text=query_text,
             vector_queries=[vector_query],
             filter=filter_expr,
             top=limit,
@@ -409,15 +425,15 @@ class SkillsSearchService:
                     "description": result.get("description"),
                     "category": result.get("category"),
                     "difficulty": result.get("difficulty"),
-                    "estimated_hours": result.get("estimated_hours", 1),
-                    "delivery": result.get("delivery", "Remote Only"),
+                    "estimated_hours": result.get("estimated_hours") or 1,
+                    "delivery": result.get("delivery") or "Remote Only",
                     "tags": tags,
                     "deliverables": [],
-                    "poster_name": result.get("poster_name", ""),
-                    "poster_city": result.get("poster_city", ""),
-                    "poster_swap_credits": result.get("poster_swap_credits", 0),
-                    "poster_average_rating": result.get("poster_average_rating", 0),
-                    "poster_review_count": result.get("poster_review_count", 0),
+                    "poster_name": result.get("poster_name") or "",
+                    "poster_city": result.get("poster_city") or "",
+                    "poster_swap_credits": int(result.get("poster_swap_credits") or 0),
+                    "poster_average_rating": float(result.get("poster_average_rating") or 0),
+                    "poster_review_count": int(result.get("poster_review_count") or 0),
                     "poster_account_type": result.get("poster_account_type") or "person",
                     "poster_photo_url": result.get("poster_photo_url") or "",
                     "swap_for": result.get("swap_for") or "",

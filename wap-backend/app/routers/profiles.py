@@ -8,7 +8,7 @@ from app.config import settings
 from app.schemas import ProfileCreate, ProfileUpdate, ProfileResponse
 from app.cosmos_db import get_cosmos_service
 from app.embeddings import get_embedding_service
-from app.azure_search import get_azure_search_service
+from app.azure_search import get_azure_search_service, get_skills_search_service
 from app.cache import get_cache_service
 from app.email_service import get_email_service
 
@@ -52,6 +52,10 @@ def upsert_profile(profile_data: ProfileCreate):
         "show_city": profile_data.show_city if profile_data.show_city is not None else True,
         "account_type": profile_data.account_type if profile_data.account_type else "person",
     }
+
+    # Give new profiles 300 credits
+    if is_new_profile:
+        profile_dict["swap_credits"] = 300
 
     # Upsert to Cosmos DB
     saved_profile = cosmos_service.upsert_profile(profile_data.uid, profile_dict)
@@ -212,6 +216,7 @@ def delete_profile(uid: str):
         raise HTTPException(status_code=404, detail="Profile not found")
 
     # Cascade-delete all skills by this user
+    skills_search = get_skills_search_service()
     try:
         user_skills = cosmos_service.get_skills_by_user(uid)
         for skill in user_skills:
@@ -222,7 +227,7 @@ def delete_profile(uid: str):
                 except Exception:
                     pass
                 try:
-                    search_service.delete_skill(skill_id)
+                    skills_search.delete_skill(skill_id)
                 except Exception:
                     pass
     except Exception:
@@ -267,5 +272,32 @@ async def upload_profile_photo(uid: str, file: UploadFile = FastAPIFile(...)):
     except Exception:
         pass
 
+    # Sync poster_photo_url to all skills in the skills search index
+    try:
+        skills_search = get_skills_search_service()
+        skills_search.update_poster_fields(uid, {"poster_photo_url": photo_url})
+    except Exception:
+        pass
+
     return {"photo_url": photo_url}
+
+
+@router.post("/admin/grant-credits")
+def admin_grant_credits():
+    """Grant 300 credits to all profiles that have 0 or missing credits."""
+    cosmos_service = get_cosmos_service()
+    profiles = list(
+        cosmos_service._container("profiles").query_items(
+            query="SELECT * FROM c",
+            enable_cross_partition_query=True,
+        )
+    )
+    updated = 0
+    for profile in profiles:
+        credits = profile.get("swap_credits") or 0
+        if credits == 0:
+            uid = profile.get("uid") or profile.get("id")
+            cosmos_service.update_profile(uid, {"swap_credits": 300})
+            updated += 1
+    return {"message": f"Granted 300 credits to {updated} profiles", "updated": updated}
 

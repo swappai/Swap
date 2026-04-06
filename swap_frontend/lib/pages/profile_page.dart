@@ -739,6 +739,27 @@ class _SkillsSectionState extends State<_SkillsSection> {
   }
 
   Future<void> _deleteSkill(Skill skill) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: HomePage.surface,
+        title: const Text('Delete Skill', style: TextStyle(color: _textPrimary)),
+        content: Text('Are you sure you want to delete "${skill.title}"?',
+            style: const TextStyle(color: _textMuted)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: const Color(0xFFEF4444)),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     try {
       await SkillService().deleteSkill(skill.id, widget.uid);
       if (mounted) _loadSkills();
@@ -783,6 +804,19 @@ class _SkillsSectionState extends State<_SkillsSection> {
                 skill: skills[i],
                 showDelete: widget.isOwnProfile,
                 onDelete: () => _deleteSkill(skills[i]),
+                onEdit: widget.isOwnProfile
+                    ? () async {
+                        final edited = await Navigator.of(context).push<bool>(
+                          MaterialPageRoute(
+                            builder: (_) => PostSkillPage(
+                              existingSkill: skills[i],
+                              popOnSuccess: true,
+                            ),
+                          ),
+                        );
+                        if (edited == true && mounted) _loadSkills();
+                      }
+                    : null,
               ),
             ),
             if (widget.isOwnProfile) ...[
@@ -827,10 +861,12 @@ class _ProfileSkillCard extends StatelessWidget {
     required this.skill,
     this.showDelete = false,
     this.onDelete,
+    this.onEdit,
   });
   final Skill skill;
   final bool showDelete;
   final VoidCallback? onDelete;
+  final VoidCallback? onEdit;
 
   static Color _categoryColor(String category) {
     switch (category.toLowerCase()) {
@@ -934,6 +970,17 @@ class _ProfileSkillCard extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onEdit != null) ...[
+                const SizedBox(width: 6),
+                InkWell(
+                  onTap: onEdit,
+                  borderRadius: BorderRadius.circular(8),
+                  child: const Padding(
+                    padding: EdgeInsets.all(4),
+                    child: Icon(HugeIcons.strokeRoundedPencilEdit02, size: 16, color: _textMuted),
+                  ),
+                ),
+              ],
               if (showDelete) ...[
                 const SizedBox(width: 6),
                 InkWell(
