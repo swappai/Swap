@@ -124,7 +124,7 @@ class MessagingService {
         .toList();
   }
 
-  /// Upload an image attachment and return the blob URL.
+  /// Upload a file attachment and return the blob URL.
   Future<String> uploadAttachment(
     String conversationId,
     String uid,
@@ -136,13 +136,13 @@ class MessagingService {
 
     debugPrint('MessagingService: POST attachment $uri');
 
-    final ext = filename.split('.').last.toLowerCase();
+    final mediaType = _mimeTypeFromFilename(filename);
     final request = http.MultipartRequest('POST', uri)
       ..files.add(http.MultipartFile.fromBytes(
         'file',
         bytes,
         filename: filename,
-        contentType: MediaType('image', ext == 'jpg' ? 'jpeg' : ext),
+        contentType: mediaType,
       ));
 
     final streamed = await request.send().timeout(const Duration(seconds: 60));
@@ -160,6 +160,7 @@ class MessagingService {
     String uid,
     String content, {
     String? attachmentUrl,
+    String? attachmentFilename,
   }) async {
     final uri = Uri.parse('$baseUrl/conversations/$conversationId/messages')
         .replace(queryParameters: {'uid': uid});
@@ -169,6 +170,9 @@ class MessagingService {
     final body = <String, dynamic>{'content': content};
     if (attachmentUrl != null) {
       body['attachment_url'] = attachmentUrl;
+    }
+    if (attachmentFilename != null) {
+      body['attachment_filename'] = attachmentFilename;
     }
 
     final headers = await _getHeaders();
@@ -227,5 +231,33 @@ class MessagingService {
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return data['total_unread'] as int? ?? 0;
+  }
+
+  static MediaType _mimeTypeFromFilename(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    const mimeMap = {
+      'jpg': 'image/jpeg',
+      'jpeg': 'image/jpeg',
+      'png': 'image/png',
+      'gif': 'image/gif',
+      'webp': 'image/webp',
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx':
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx':
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx':
+          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'txt': 'text/plain',
+      'csv': 'text/csv',
+      'json': 'application/json',
+      'zip': 'application/zip',
+    };
+    final mime = mimeMap[ext] ?? 'application/octet-stream';
+    final parts = mime.split('/');
+    return MediaType(parts[0], parts[1]);
   }
 }

@@ -290,7 +290,8 @@ class MessageCreate(BaseModel):
     """Schema for sending a message."""
 
     content: str = Field("", max_length=5000, description="Message content")
-    attachment_url: Optional[str] = Field(None, description="URL of an attached image")
+    attachment_url: Optional[str] = Field(None, description="URL of an attached file")
+    attachment_filename: Optional[str] = Field(None, description="Original filename of the attachment")
 
     @property
     def has_content(self) -> bool:
@@ -299,8 +300,9 @@ class MessageCreate(BaseModel):
     class Config:
         json_schema_extra = {
             "example": {
-                "content": "Check out this photo!",
-                "attachment_url": "https://example.com/image.jpg",
+                "content": "Check out this file!",
+                "attachment_url": "https://example.com/file.pdf",
+                "attachment_filename": "document.pdf",
             }
         }
 
@@ -318,6 +320,7 @@ class MessageResponse(BaseModel):
     read_by: List[str] = Field(default_factory=list)
     type: MessageType = MessageType.text
     attachment_url: Optional[str] = None
+    attachment_filename: Optional[str] = None
 
 
 class LastMessage(BaseModel):

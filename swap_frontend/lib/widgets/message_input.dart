@@ -10,8 +10,9 @@ class MessageInput extends StatelessWidget {
   final VoidCallback onSend;
   final bool sending;
   final VoidCallback? onAttachment;
-  final Uint8List? pendingImageBytes;
-  final VoidCallback? onRemovePendingImage;
+  final Uint8List? pendingFileBytes;
+  final String? pendingFileName;
+  final VoidCallback? onRemovePendingFile;
   final bool uploading;
 
   const MessageInput({
@@ -20,10 +21,17 @@ class MessageInput extends StatelessWidget {
     required this.onSend,
     this.sending = false,
     this.onAttachment,
-    this.pendingImageBytes,
-    this.onRemovePendingImage,
+    this.pendingFileBytes,
+    this.pendingFileName,
+    this.onRemovePendingFile,
     this.uploading = false,
   });
+
+  bool get _isPendingImage {
+    if (pendingFileName == null) return false;
+    final ext = pendingFileName!.split('.').last.toLowerCase();
+    return {'jpg', 'jpeg', 'png', 'gif', 'webp'}.contains(ext);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,63 +45,15 @@ class MessageInput extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Pending image preview
-            if (pendingImageBytes != null)
+            // Pending file preview
+            if (pendingFileBytes != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Align(
                   alignment: Alignment.centerLeft,
-                  child: Stack(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.memory(
-                          pendingImageBytes!,
-                          width: 120,
-                          height: 120,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Positioned(
-                        top: 4,
-                        right: 4,
-                        child: GestureDetector(
-                          onTap: onRemovePendingImage,
-                          child: Container(
-                            decoration: const BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(4),
-                            child: const Icon(
-                              Icons.close,
-                              size: 16,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (uploading)
-                        Positioned.fill(
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Colors.black38,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 24,
-                                height: 24,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
+                  child: _isPendingImage
+                      ? _buildImagePreview()
+                      : _buildFilePreview(),
                 ),
               ),
             Row(
@@ -102,7 +62,7 @@ class MessageInput extends StatelessWidget {
                   IconButton(
                     onPressed: (sending || uploading) ? null : onAttachment,
                     icon: Icon(
-                      Icons.image_outlined,
+                      Icons.attach_file,
                       color: (sending || uploading)
                           ? HomePage.textMuted.withOpacity(0.5)
                           : HomePage.textMuted,
@@ -166,5 +126,134 @@ class MessageInput extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildImagePreview() {
+    return Stack(
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.memory(
+            pendingFileBytes!,
+            width: 120,
+            height: 120,
+            fit: BoxFit.cover,
+          ),
+        ),
+        _buildRemoveButton(),
+        if (uploading) _buildUploadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildFilePreview() {
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: HomePage.surfaceAlt,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: HomePage.line),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _fileIcon(pendingFileName ?? ''),
+                color: HomePage.accent,
+                size: 28,
+              ),
+              const SizedBox(width: 10),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 180),
+                child: Text(
+                  pendingFileName ?? 'file',
+                  style: const TextStyle(
+                    color: HomePage.textPrimary,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: onRemovePendingFile,
+                child: const Icon(Icons.close, size: 18, color: HomePage.textMuted),
+              ),
+            ],
+          ),
+        ),
+        if (uploading) _buildUploadingOverlay(),
+      ],
+    );
+  }
+
+  Widget _buildRemoveButton() {
+    return Positioned(
+      top: 4,
+      right: 4,
+      child: GestureDetector(
+        onTap: onRemovePendingFile,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.black54,
+            shape: BoxShape.circle,
+          ),
+          padding: const EdgeInsets.all(4),
+          child: const Icon(
+            Icons.close,
+            size: 16,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUploadingOverlay() {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.black38,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static IconData _fileIcon(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      case 'zip':
+        return Icons.folder_zip;
+      case 'txt':
+        return Icons.text_snippet;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 }

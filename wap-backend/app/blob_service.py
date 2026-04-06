@@ -43,7 +43,7 @@ class BlobService:
     def upload_chat_attachment(
         self, conversation_id: str, sender_uid: str, file_bytes: bytes, content_type: str
     ) -> str:
-        """Upload a chat image attachment and return its public URL."""
+        """Upload a chat attachment and return its public URL."""
         ext = _ext_from_content_type(content_type)
         blob_name = f"messages/{conversation_id}/{uuid.uuid4().hex}{ext}"
         container_client = self._client.get_container_client(self._container_name)
@@ -65,12 +65,29 @@ class BlobService:
 
 def _ext_from_content_type(content_type: str) -> str:
     mapping = {
+        # Images
         "image/jpeg": ".jpg",
         "image/png": ".png",
         "image/gif": ".gif",
         "image/webp": ".webp",
+        # Documents
+        "application/pdf": ".pdf",
+        "application/msword": ".doc",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+        "application/vnd.ms-excel": ".xls",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+        "application/vnd.ms-powerpoint": ".ppt",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation": ".pptx",
+        # Text
+        "text/plain": ".txt",
+        "text/csv": ".csv",
+        # Archives
+        "application/zip": ".zip",
+        "application/x-zip-compressed": ".zip",
+        # Other
+        "application/json": ".json",
     }
-    return mapping.get(content_type, ".jpg")
+    return mapping.get(content_type, ".bin")
 
 
 _blob_service: Optional[BlobService] = None

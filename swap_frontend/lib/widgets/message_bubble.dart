@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../models/conversation.dart';
 import '../pages/home_page.dart';
@@ -16,6 +17,16 @@ class MessageBubble extends StatelessWidget {
   });
 
   static const _whatsappBlue = Color(0xFF53BDEB);
+
+  static bool _isImageUrl(String url) {
+    final path = Uri.parse(url).path.toLowerCase();
+    return path.endsWith('.jpg') || path.endsWith('.jpeg') ||
+        path.endsWith('.png') || path.endsWith('.gif') ||
+        path.endsWith('.webp');
+  }
+
+  bool get _hasImageAttachment =>
+      message.attachmentUrl != null && _isImageUrl(message.attachmentUrl!);
 
   @override
   Widget build(BuildContext context) {
@@ -34,8 +45,8 @@ class MessageBubble extends StatelessWidget {
               maxWidth: MediaQuery.of(context).size.width * 0.7,
             ),
             padding: EdgeInsets.symmetric(
-              horizontal: (message.attachmentUrl != null && message.content.trim().isEmpty) ? 4 : 14,
-              vertical: (message.attachmentUrl != null && message.content.trim().isEmpty) ? 4 : 10,
+              horizontal: (_hasImageAttachment && message.content.trim().isEmpty) ? 4 : 14,
+              vertical: (_hasImageAttachment && message.content.trim().isEmpty) ? 4 : 10,
             ),
             decoration: BoxDecoration(
               color: isMe ? HomePage.accent : HomePage.surface,
@@ -51,7 +62,9 @@ class MessageBubble extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 if (message.attachmentUrl != null)
-                  _buildAttachmentImage(context),
+                  _isImageUrl(message.attachmentUrl!)
+                      ? _buildAttachmentImage(context)
+                      : _buildAttachmentFile(context),
                 if (message.content.trim().isNotEmpty)
                   Text(
                     message.content,
@@ -134,6 +147,91 @@ class MessageBubble extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildAttachmentFile(BuildContext context) {
+    final filename = message.attachmentFilename ??
+        Uri.parse(message.attachmentUrl!).pathSegments.lastOrNull ?? 'file';
+
+    return Padding(
+      padding: EdgeInsets.only(
+        bottom: message.content.trim().isNotEmpty ? 8 : 0,
+      ),
+      child: GestureDetector(
+        onTap: () => launchUrl(
+          Uri.parse(message.attachmentUrl!),
+          mode: LaunchMode.externalApplication,
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isMe
+                ? Colors.white.withOpacity(0.1)
+                : HomePage.surfaceAlt,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                _fileIcon(filename),
+                color: isMe ? Colors.white70 : HomePage.accent,
+                size: 32,
+              ),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      filename,
+                      style: TextStyle(
+                        color: isMe ? Colors.white : HomePage.textPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    Text(
+                      'Tap to open',
+                      style: TextStyle(
+                        color: isMe ? Colors.white54 : HomePage.textMuted,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static IconData _fileIcon(String filename) {
+    final ext = filename.split('.').last.toLowerCase();
+    switch (ext) {
+      case 'pdf':
+        return Icons.picture_as_pdf;
+      case 'doc':
+      case 'docx':
+        return Icons.description;
+      case 'xls':
+      case 'xlsx':
+      case 'csv':
+        return Icons.table_chart;
+      case 'ppt':
+      case 'pptx':
+        return Icons.slideshow;
+      case 'zip':
+        return Icons.folder_zip;
+      case 'txt':
+        return Icons.text_snippet;
+      default:
+        return Icons.insert_drive_file;
+    }
   }
 
   static void _showFullscreenImage(BuildContext context, String url) {

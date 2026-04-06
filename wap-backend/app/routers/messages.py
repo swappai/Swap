@@ -20,7 +20,6 @@ from app.email_service import get_email_service
 from app.blob_service import get_blob_service
 from app.cache import get_cache_service
 
-_ALLOWED_IMAGE_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
 _MAX_ATTACHMENT_SIZE = 10 * 1024 * 1024  # 10 MB
 
 router = APIRouter(prefix="/conversations", tags=["messaging"])
@@ -191,6 +190,7 @@ def get_messages(
             read_by=m.get("read_by", []),
             type=MessageType(m.get("type", "text")),
             attachment_url=m.get("attachment_url"),
+            attachment_filename=m.get("attachment_filename"),
         )
         for m in messages
     ]
@@ -203,10 +203,10 @@ async def upload_attachment(
     file: UploadFile = File(...),
 ):
     """
-    Upload an image attachment for a conversation message.
+    Upload a file attachment for a conversation message.
 
     - Validates user is a participant
-    - Validates file type (jpg, png, gif, webp) and size (<=10MB)
+    - Validates file size (<=10MB)
     - Returns the blob URL to include in a subsequent message
     """
     cosmos = get_cosmos_service()
@@ -216,12 +216,6 @@ async def upload_attachment(
         raise HTTPException(status_code=404, detail="Conversation not found")
     if uid not in conv.get("participant_uids", []):
         raise HTTPException(status_code=403, detail="Not a participant in this conversation")
-
-    if file.content_type not in _ALLOWED_IMAGE_TYPES:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type: {file.content_type}. Allowed: jpg, png, gif, webp",
-        )
 
     file_bytes = await file.read()
     if len(file_bytes) > _MAX_ATTACHMENT_SIZE:
@@ -288,6 +282,8 @@ def send_message(
     }
     if message.attachment_url:
         msg_data["attachment_url"] = message.attachment_url
+    if message.attachment_filename:
+        msg_data["attachment_filename"] = message.attachment_filename
 
     msg = cosmos.create_message(
         conversation_id=conversation_id,
@@ -298,8 +294,14 @@ def send_message(
     has_text = bool(message.content.strip())
     if has_text:
         preview_text = message.content[:100]
+    elif message.attachment_filename:
+        ext = message.attachment_filename.rsplit(".", 1)[-1].lower() if "." in message.attachment_filename else ""
+        if ext in {"jpg", "jpeg", "png", "gif", "webp"}:
+            preview_text = "\U0001f4f7 Photo"
+        else:
+            preview_text = "\U0001f4ce " + message.attachment_filename
     else:
-        preview_text = "\U0001f4f7 Image"
+        preview_text = "\U0001f4ce Attachment"
 
     # Update conversation unread counts + last_message
     participant_uids = conv.get("participant_uids", [])
@@ -325,8 +327,8 @@ def send_message(
     notification_body_suffix = "sent you a message"
     email_preview = message.content[:100]
     if not has_text and message.attachment_url:
-        notification_body_suffix = "sent you an image"
-        email_preview = "\U0001f4f7 Image"
+        notification_body_suffix = "sent you a file"
+        email_preview = preview_text
 
     # Email notification to other participant
     if other_uid:
@@ -372,6 +374,7 @@ def send_message(
         read_by=[uid],
         type=MessageType.text,
         attachment_url=message.attachment_url,
+        attachment_filename=message.attachment_filename,
     )
 
 

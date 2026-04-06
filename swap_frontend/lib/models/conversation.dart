@@ -16,6 +16,7 @@ class Message {
   final List<String> readBy;
   final MessageType type;
   final String? attachmentUrl;
+  final String? attachmentFilename;
 
   Message({
     required this.id,
@@ -28,6 +29,7 @@ class Message {
     this.readBy = const [],
     this.type = MessageType.text,
     this.attachmentUrl,
+    this.attachmentFilename,
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -50,6 +52,7 @@ class Message {
             [],
         type: json['type'] == 'system' ? MessageType.system : MessageType.text,
         attachmentUrl: json['attachment_url'] as String?,
+        attachmentFilename: json['attachment_filename'] as String?,
       );
 
   Map<String, dynamic> toJson() => {
@@ -63,6 +66,7 @@ class Message {
         'read_by': readBy,
         'type': type == MessageType.system ? 'system' : 'text',
         if (attachmentUrl != null) 'attachment_url': attachmentUrl,
+        if (attachmentFilename != null) 'attachment_filename': attachmentFilename,
       };
 
   bool isReadBy(String uid) => readBy.contains(uid);

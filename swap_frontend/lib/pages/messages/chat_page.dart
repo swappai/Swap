@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 
 import '../../config.dart';
 import '../home_page.dart';
@@ -38,10 +38,9 @@ class _ChatPageState extends State<ChatPage> {
   String? _error;
   Timer? _pollTimer;
 
-  // Image attachment state
-  final _imagePicker = ImagePicker();
-  Uint8List? _pendingImageBytes;
-  String? _pendingImageFilename;
+  // File attachment state
+  Uint8List? _pendingFileBytes;
+  String? _pendingFileName;
   bool _uploading = false;
 
   // Swap request tracking for completion banner
@@ -145,29 +144,30 @@ class _ChatPageState extends State<ChatPage> {
     }
   }
 
-  Future<void> _pickImage() async {
+  Future<void> _pickFile() async {
     try {
-      final picked = await _imagePicker.pickImage(
-        source: ImageSource.gallery,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.any,
+        withData: true,
       );
-      if (picked == null) return;
+      if (result == null || result.files.isEmpty) return;
 
-      final bytes = await picked.readAsBytes();
+      final file = result.files.first;
+      final bytes = file.bytes;
+      if (bytes == null) return;
+
       if (mounted) {
         setState(() {
-          _pendingImageBytes = bytes;
-          _pendingImageFilename = picked.name;
+          _pendingFileBytes = bytes;
+          _pendingFileName = file.name;
         });
       }
     } catch (e) {
-      debugPrint('Error picking image: $e');
+      debugPrint('Error picking file: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: $e'),
+            content: Text('Failed to pick file: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -177,23 +177,24 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _sendMessage() async {
     final content = _messageController.text.trim();
-    final hasImage = _pendingImageBytes != null;
-    if (content.isEmpty && !hasImage) return;
+    final hasFile = _pendingFileBytes != null;
+    if (content.isEmpty && !hasFile) return;
     if (_sending || _uploading) return;
 
     setState(() => _sending = true);
 
     try {
       String? attachmentUrl;
+      final filename = _pendingFileName;
 
-      // Upload image first if present
-      if (hasImage) {
+      // Upload file first if present
+      if (hasFile) {
         setState(() => _uploading = true);
         attachmentUrl = await _messagingService.uploadAttachment(
           widget.conversation.id,
           _currentUid,
-          _pendingImageBytes!,
-          _pendingImageFilename ?? 'image.jpg',
+          _pendingFileBytes!,
+          filename ?? 'file',
         );
         if (mounted) setState(() => _uploading = false);
       }
@@ -203,14 +204,15 @@ class _ChatPageState extends State<ChatPage> {
         _currentUid,
         content,
         attachmentUrl: attachmentUrl,
+        attachmentFilename: filename,
       );
 
       if (mounted) {
         setState(() {
           _messages.add(message);
           _messageController.clear();
-          _pendingImageBytes = null;
-          _pendingImageFilename = null;
+          _pendingFileBytes = null;
+          _pendingFileName = null;
           _sending = false;
         });
         _scrollToBottom();
@@ -898,11 +900,12 @@ class _ChatPageState extends State<ChatPage> {
             controller: _messageController,
             onSend: _sendMessage,
             sending: _sending,
-            onAttachment: _pickImage,
-            pendingImageBytes: _pendingImageBytes,
-            onRemovePendingImage: () => setState(() {
-              _pendingImageBytes = null;
-              _pendingImageFilename = null;
+            onAttachment: _pickFile,
+            pendingFileBytes: _pendingFileBytes,
+            pendingFileName: _pendingFileName,
+            onRemovePendingFile: () => setState(() {
+              _pendingFileBytes = null;
+              _pendingFileName = null;
             }),
             uploading: _uploading,
           ),
