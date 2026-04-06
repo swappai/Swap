@@ -150,7 +150,6 @@ def search_skills(request: SkillSearchRequest):
         query_vec=query_vec,
         limit=request.limit,
         category_filter=request.category,
-        query_text=None,
     )
 
     cache_service.set(cache_key, results, ttl=3600)
