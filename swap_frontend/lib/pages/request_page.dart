@@ -128,9 +128,15 @@ class _IncomingTabState extends State<_IncomingTab> {
   }
 
   Future<void> _respond(SwapRequest req, bool accept) async {
+    String? acceptMessage;
+    if (accept) {
+      acceptMessage = await _showAcceptDialog(req);
+      if (acceptMessage == null) return; // user cancelled the dialog
+    }
+
     final uid = B2CAuthService.instance.currentUser?.uid ?? '';
     try {
-      await _service.respondToRequest(req.id, uid, accept);
+      await _service.respondToRequest(req.id, uid, accept, message: acceptMessage);
       _load();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,6 +152,71 @@ class _IncomingTabState extends State<_IncomingTab> {
         ).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
+  }
+
+  Future<String?> _showAcceptDialog(SwapRequest req) async {
+    final controller = TextEditingController();
+    final requesterName = req.requesterProfile?.displayName ?? 'this user';
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: HomePage.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Accept Swap Request',
+          style: TextStyle(color: HomePage.textPrimary, fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'You\'re about to accept the swap with $requesterName.',
+              style: const TextStyle(color: HomePage.textMuted, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              maxLines: 3,
+              style: const TextStyle(color: HomePage.textPrimary, fontSize: 14),
+              decoration: InputDecoration(
+                hintText: 'Add a message (optional)',
+                hintStyle: const TextStyle(color: HomePage.textMuted),
+                filled: true,
+                fillColor: HomePage.bg,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: HomePage.line),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: BorderSide(color: HomePage.line),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  borderSide: const BorderSide(color: HomePage.accent),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel', style: TextStyle(color: HomePage.textMuted)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            style: FilledButton.styleFrom(
+              backgroundColor: HomePage.accent,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Accept'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override

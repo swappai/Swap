@@ -40,6 +40,9 @@ class SwapRequest {
   final String requesterOffer;
   final String requesterNeed;
   final String? message;
+  final String swapType; // 'direct' or 'indirect'
+  final int? pointsOffered;
+  final int? pointsReserved;
   final DateTime createdAt;
   final DateTime updatedAt;
   final DateTime? respondedAt;
@@ -59,6 +62,9 @@ class SwapRequest {
     required this.requesterOffer,
     required this.requesterNeed,
     this.message,
+    this.swapType = 'direct',
+    this.pointsOffered,
+    this.pointsReserved,
     required this.createdAt,
     required this.updatedAt,
     this.respondedAt,
@@ -79,6 +85,9 @@ class SwapRequest {
         requesterOffer: json['requester_offer'] as String? ?? '',
         requesterNeed: json['requester_need'] as String? ?? '',
         message: json['message'] as String?,
+        swapType: json['swap_type'] as String? ?? 'direct',
+        pointsOffered: json['points_offered'] as int?,
+        pointsReserved: json['points_reserved'] as int?,
         createdAt: json['created_at'] != null
             ? DateTime.parse(json['created_at'] as String)
             : DateTime.now(),
@@ -126,6 +135,9 @@ class SwapRequest {
         'requester_offer': requesterOffer,
         'requester_need': requesterNeed,
         'message': message,
+        'swap_type': swapType,
+        'points_offered': pointsOffered,
+        'points_reserved': pointsReserved,
         'created_at': createdAt.toIso8601String(),
         'updated_at': updatedAt.toIso8601String(),
         'responded_at': respondedAt?.toIso8601String(),

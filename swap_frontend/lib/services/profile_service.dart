@@ -55,6 +55,7 @@ class ProfileService {
     bool? showCity,
     String accountType = 'person',
     String? photoUrl,
+    String? website,
     Duration? timeout,
   }) async {
     // Allow empty skillsToOffer — the backend handles it as Optional.
@@ -87,6 +88,7 @@ class ProfileService {
     if (showCity != null) bodyMap['show_city'] = showCity;
     if (accountType.isNotEmpty) bodyMap['account_type'] = accountType;
     if (photoUrl != null && photoUrl.isNotEmpty) bodyMap['photo_url'] = photoUrl;
+    if (website != null) bodyMap['website'] = website;
     final body = jsonEncode(bodyMap);
 
     debugPrint('[ProfileService] POST $uri headers=$headers body=$bodyMap');

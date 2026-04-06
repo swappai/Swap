@@ -44,6 +44,8 @@ class SwapRequestService {
     String? message,
     String? requesterOfferSkillId,
     String? requesterNeedSkillId,
+    String swapType = 'direct',
+    int? pointsOffered,
   }) async {
     final uri = Uri.parse('$baseUrl/swap-requests').replace(
       queryParameters: {'requester_uid': requesterUid},
@@ -61,6 +63,8 @@ class SwapRequestService {
         'requester_offer_skill_id': requesterOfferSkillId,
       if (requesterNeedSkillId != null)
         'requester_need_skill_id': requesterNeedSkillId,
+      'swap_type': swapType,
+      if (pointsOffered != null) 'points_offered': pointsOffered,
     });
 
     final response = await http
@@ -143,8 +147,9 @@ class SwapRequestService {
   Future<SwapRequest> respondToRequest(
     String requestId,
     String uid,
-    bool accept,
-  ) async {
+    bool accept, {
+    String? message,
+  }) async {
     final uri = Uri.parse('$baseUrl/swap-requests/$requestId/respond')
         .replace(queryParameters: {'uid': uid});
 
@@ -153,6 +158,7 @@ class SwapRequestService {
     final headers = await _getHeaders();
     final body = jsonEncode({
       'action': accept ? 'accept' : 'decline',
+      if (accept && message != null && message.isNotEmpty) 'message': message,
     });
 
     final response = await http

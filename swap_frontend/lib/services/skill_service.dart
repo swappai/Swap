@@ -18,6 +18,7 @@ class Skill {
   final String delivery;
   final List<String> tags;
   final List<String> deliverables;
+  final String? swapFor;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -32,6 +33,7 @@ class Skill {
     required this.delivery,
     required this.tags,
     required this.deliverables,
+    this.swapFor,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -53,6 +55,7 @@ class Skill {
                 ?.map((e) => e.toString())
                 .toList() ??
             [],
+        swapFor: j['swap_for'] as String?,
         createdAt: j['created_at'] != null
             ? DateTime.parse(j['created_at'] as String)
             : DateTime.now(),

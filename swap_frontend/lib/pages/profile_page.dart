@@ -93,6 +93,16 @@ class _ProfilePageState extends State<ProfilePage> {
     }
   }
 
+  void _showSwapRequestDialog(BuildContext context, String recipientUid, String recipientName) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _ProfileSwapRequestDialog(
+        recipientUid: recipientUid,
+        recipientName: recipientName,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final currentUid = B2CAuthService.instance.currentUser?.uid;
@@ -139,6 +149,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   final averageRating = (data['average_rating'] as num?)?.toDouble() ?? 0.0;
                   final reviewCount = (data['review_count'] as num?)?.toInt() ?? 0;
                   final accountType = (data['account_type'] ?? '').toString().trim();
+                  final website = (data['website'] ?? '').toString().trim();
                   final joinedAt = DateTime.tryParse(data['created_at'] ?? '');
 
                   return SingleChildScrollView(
@@ -204,6 +215,56 @@ class _ProfilePageState extends State<ProfilePage> {
                                     }
                                   : null,
                             ),
+
+                            // ===== WEBSITE LINK =====
+                            if (website.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              InkWell(
+                                onTap: () {
+                                  // Open URL - just show it for now
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text(website)),
+                                  );
+                                },
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(HugeIcons.strokeRoundedInternet, size: 16, color: HomePage.accentAlt),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      website,
+                                      style: const TextStyle(
+                                        color: HomePage.accentAlt,
+                                        fontSize: 14,
+                                        decoration: TextDecoration.underline,
+                                        decorationColor: HomePage.accentAlt,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+
+                            // ===== REQUEST A SWAP BUTTON =====
+                            if (!isOwnProfile && currentUid != null) ...[
+                              const SizedBox(height: 16),
+                              Align(
+                                alignment: Alignment.centerLeft,
+                                child: FilledButton.icon(
+                                  onPressed: () {
+                                    _showSwapRequestDialog(context, targetUid, name.isNotEmpty ? name : 'User');
+                                  },
+                                  icon: const Icon(HugeIcons.strokeRoundedArrowDataTransferHorizontal, size: 18),
+                                  label: const Text('Request a Swap'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: _accent,
+                                    foregroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                ),
+                              ),
+                            ],
 
                             const SizedBox(height: 24),
 
@@ -1512,6 +1573,314 @@ class _AuthGuard extends StatelessWidget {
         'Please sign in to view your profile.',
         style: TextStyle(color: _textPrimary),
       ),
+    );
+  }
+}
+
+/* ========================== SWAP REQUEST DIALOG (from profile) ========================== */
+
+class _ProfileSwapRequestDialog extends StatefulWidget {
+  const _ProfileSwapRequestDialog({
+    required this.recipientUid,
+    required this.recipientName,
+  });
+  final String recipientUid;
+  final String recipientName;
+
+  @override
+  State<_ProfileSwapRequestDialog> createState() => _ProfileSwapRequestDialogState();
+}
+
+class _ProfileSwapRequestDialogState extends State<_ProfileSwapRequestDialog> {
+  final _msgCtrl = TextEditingController();
+  final _pointsCtrl = TextEditingController();
+  bool _sending = false;
+  bool _loadingSkills = true;
+  bool _isDirect = true; // true = Skill Exchange, false = Use Points
+
+  List<Skill> _recipientSkills = [];
+  List<Skill> _mySkills = [];
+  Skill? _selectedNeed;
+  Skill? _selectedOffer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSkills();
+  }
+
+  @override
+  void dispose() {
+    _msgCtrl.dispose();
+    _pointsCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadSkills() async {
+    final myUid = B2CAuthService.instance.currentUser?.uid;
+    if (myUid == null) {
+      setState(() => _loadingSkills = false);
+      return;
+    }
+    try {
+      final skillService = SkillService();
+      final futures = await Future.wait([
+        skillService.getSkillsByUser(widget.recipientUid),
+        skillService.getSkillsByUser(myUid),
+      ]);
+      if (mounted) {
+        setState(() {
+          _recipientSkills = futures[0];
+          _mySkills = futures[1];
+          _loadingSkills = false;
+          if (_recipientSkills.isNotEmpty) _selectedNeed = _recipientSkills.first;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading skills for dialog: $e');
+      if (mounted) setState(() => _loadingSkills = false);
+    }
+  }
+
+  bool get _canSend {
+    if (_selectedNeed == null) return false;
+    if (_isDirect) return _selectedOffer != null;
+    final pts = int.tryParse(_pointsCtrl.text) ?? 0;
+    return pts > 0;
+  }
+
+  Future<void> _sendRequest() async {
+    final currentUser = B2CAuthService.instance.currentUser;
+    if (currentUser == null || _selectedNeed == null) return;
+    if (_isDirect && _selectedOffer == null) return;
+
+    final pointsOffered = _isDirect ? null : int.tryParse(_pointsCtrl.text);
+    if (!_isDirect && (pointsOffered == null || pointsOffered <= 0)) return;
+
+    setState(() => _sending = true);
+    try {
+      await SwapRequestService().createRequest(
+        requesterUid: currentUser.uid,
+        recipientUid: widget.recipientUid,
+        requesterOffer: _isDirect ? _selectedOffer!.title : '',
+        requesterNeed: _selectedNeed!.title,
+        message: _msgCtrl.text.trim().isNotEmpty ? _msgCtrl.text.trim() : null,
+        requesterOfferSkillId: _isDirect ? _selectedOffer!.id : null,
+        requesterNeedSkillId: _selectedNeed!.id,
+        swapType: _isDirect ? 'direct' : 'indirect',
+        pointsOffered: pointsOffered,
+      );
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Swap request sent!'),
+            backgroundColor: HomePage.success,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send request: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: HomePage.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: HomePage.line),
+      ),
+      title: Text(
+        'Send Swap Request to ${widget.recipientName}',
+        style: const TextStyle(
+          color: HomePage.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: SizedBox(
+        width: 440,
+        child: _loadingSkills
+            ? const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Direct / Indirect toggle
+                  Container(
+                    decoration: BoxDecoration(
+                      color: HomePage.bg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isDirect = true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _isDirect ? HomePage.accent : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Skill Exchange',
+                                style: TextStyle(
+                                  color: _isDirect ? Colors.white : HomePage.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isDirect = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: !_isDirect ? HomePage.accent : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Use Points',
+                                style: TextStyle(
+                                  color: !_isDirect ? Colors.white : HomePage.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'What you need from them',
+                    style: TextStyle(color: HomePage.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 6),
+                  _recipientSkills.isNotEmpty
+                      ? DropdownButtonFormField<Skill>(
+                          value: _selectedNeed,
+                          dropdownColor: HomePage.surface,
+                          style: const TextStyle(color: HomePage.textPrimary),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: HomePage.line),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          ),
+                          items: _recipientSkills
+                              .map((s) => DropdownMenuItem<Skill>(
+                                    value: s,
+                                    child: Text('${s.title} (${s.category})', overflow: TextOverflow.ellipsis),
+                                  ))
+                              .toList(),
+                          onChanged: (v) => setState(() => _selectedNeed = v),
+                        )
+                      : const Text('No skills posted by this user', style: TextStyle(color: HomePage.textMuted)),
+                  const SizedBox(height: 16),
+                  if (_isDirect) ...[
+                    const Text(
+                      'What you\'re offering',
+                      style: TextStyle(color: HomePage.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    _mySkills.isNotEmpty
+                        ? DropdownButtonFormField<Skill>(
+                            value: _selectedOffer,
+                            dropdownColor: HomePage.surface,
+                            style: const TextStyle(color: HomePage.textPrimary),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: HomePage.line),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            ),
+                            items: _mySkills
+                                .map((s) => DropdownMenuItem<Skill>(
+                                      value: s,
+                                      child: Text('${s.title} (${s.category})', overflow: TextOverflow.ellipsis),
+                                    ))
+                                .toList(),
+                            onChanged: (v) => setState(() => _selectedOffer = v),
+                          )
+                        : const Text(
+                            'You haven\'t posted any skills yet. Post a skill first!',
+                            style: TextStyle(color: HomePage.textMuted),
+                          ),
+                  ] else ...[
+                    const Text(
+                      'Points to offer',
+                      style: TextStyle(color: HomePage.textMuted, fontSize: 13, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _pointsCtrl,
+                      style: const TextStyle(color: HomePage.textPrimary),
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Enter points amount',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: HomePage.line),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _msgCtrl,
+                    style: const TextStyle(color: HomePage.textPrimary),
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Message (optional)',
+                      hintText: 'Add a personal note...',
+                    ),
+                  ),
+                ],
+              ),
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _sending ? null : () => Navigator.of(context).pop(),
+          child: Text('Cancel', style: TextStyle(color: HomePage.textMuted)),
+        ),
+        FilledButton(
+          onPressed: _sending || !_canSend ? null : _sendRequest,
+          style: FilledButton.styleFrom(
+            backgroundColor: HomePage.accent,
+            foregroundColor: Colors.white,
+          ),
+          child: _sending
+              ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+              : const Text('Send Request'),
+        ),
+      ],
     );
   }
 }

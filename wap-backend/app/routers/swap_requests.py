@@ -64,73 +64,61 @@ def _enrich_swap_request(request_data: dict) -> SwapRequestResponse:
     )
 
 
-def _reserve_points(db, uid: str, amount: int, swap_id: str) -> bool:
+def _reserve_points(cosmos, uid: str, amount: int, swap_id: str) -> bool:
     """Reserve points for an indirect swap. Returns True if successful."""
-    profile_ref = db.collection("profiles").document(uid)
-    profile_doc = profile_ref.get()
-    
-    if not profile_doc.exists:
+    profile = cosmos.get_profile(uid)
+    if not profile:
         return False
-    
-    profile = profile_doc.to_dict()
+
     current_balance = profile.get("swap_points", 0)
-    
     if current_balance < amount:
         return False
-    
-    # Deduct points and record transaction
+
     new_balance = current_balance - amount
-    now = datetime.utcnow()
-    
+    now = datetime.utcnow().isoformat()
+
     # Create reservation transaction
-    db.collection("points_transactions").add({
-        "uid": uid,
-        "type": "spent",
-        "amount": amount,
-        "balance_after": new_balance,
-        "reason": PointsTransactionReason.indirect_swap_reserved.value,
-        "related_swap_id": swap_id,
-        "created_at": now,
-    })
-    
+    cosmos.create_points_transaction(
+        uid=uid,
+        data={
+            "uid": uid,
+            "type": "spent",
+            "points": amount,
+            "reason": PointsTransactionReason.indirect_swap_reserved.value,
+            "description": f"Points reserved for indirect swap",
+            "swap_request_id": swap_id,
+        },
+    )
+
     # Update profile balance
-    profile_ref.update({
-        "swap_points": new_balance,
-        "updated_at": now,
-    })
-    
+    cosmos.update_profile(uid, {"swap_points": new_balance})
     return True
 
 
-def _refund_reserved_points(db, uid: str, amount: int, swap_id: str):
+def _refund_reserved_points(cosmos, uid: str, amount: int, swap_id: str):
     """Refund reserved points when a swap is declined or cancelled."""
-    profile_ref = db.collection("profiles").document(uid)
-    profile_doc = profile_ref.get()
-    
-    if not profile_doc.exists:
+    profile = cosmos.get_profile(uid)
+    if not profile:
         return
-    
-    profile = profile_doc.to_dict()
+
     current_balance = profile.get("swap_points", 0)
     new_balance = current_balance + amount
-    now = datetime.utcnow()
-    
+
     # Create refund transaction
-    db.collection("points_transactions").add({
-        "uid": uid,
-        "type": "earned",
-        "amount": amount,
-        "balance_after": new_balance,
-        "reason": PointsTransactionReason.indirect_swap_refund.value,
-        "related_swap_id": swap_id,
-        "created_at": now,
-    })
-    
+    cosmos.create_points_transaction(
+        uid=uid,
+        data={
+            "uid": uid,
+            "type": "earned",
+            "points": amount,
+            "reason": PointsTransactionReason.indirect_swap_refund.value,
+            "description": f"Points refunded for declined/cancelled swap",
+            "swap_request_id": swap_id,
+        },
+    )
+
     # Update profile balance
-    profile_ref.update({
-        "swap_points": new_balance,
-        "updated_at": now,
-    })
+    cosmos.update_profile(uid, {"swap_points": new_balance})
 
 
 @router.post("", response_model=SwapRequestResponse)
@@ -161,6 +149,17 @@ def create_swap_request(
     if cosmos.check_pending_request_exists(requester_uid, request.recipient_uid):
         raise HTTPException(status_code=400, detail="You already have a pending request to this user")
 
+    is_indirect = request.swap_type == SwapType.indirect
+    points_reserved = 0
+
+    if is_indirect:
+        if not request.points_offered or request.points_offered <= 0:
+            raise HTTPException(status_code=400, detail="Points offered must be > 0 for indirect swaps")
+        points_reserved = request.points_offered
+    else:
+        if not request.requester_offer:
+            raise HTTPException(status_code=400, detail="requester_offer is required for direct swaps")
+
     now = datetime.utcnow().isoformat()
     request_doc = cosmos.create_swap_request(
         requester_uid=requester_uid,
@@ -168,8 +167,11 @@ def create_swap_request(
             "requester_uid": requester_uid,
             "recipient_uid": request.recipient_uid,
             "status": SwapRequestStatus.pending.value,
+            "swap_type": request.swap_type.value,
             "requester_offer": request.requester_offer,
             "requester_need": request.requester_need,
+            "points_offered": request.points_offered if is_indirect else None,
+            "points_reserved": points_reserved if is_indirect else None,
             "message": request.message,
             "responded_at": None,
             "conversation_id": None,
@@ -179,6 +181,18 @@ def create_swap_request(
             "requester_need_skill_id": request.requester_need_skill_id,
         },
     )
+
+    # Reserve points for indirect swaps
+    if is_indirect and points_reserved > 0:
+        success = _reserve_points(cosmos, requester_uid, points_reserved, request_doc["id"])
+        if not success:
+            # Roll back the swap request
+            cosmos.update_swap_request(
+                request_id=request_doc["id"],
+                requester_uid=requester_uid,
+                update_data={"status": SwapRequestStatus.cancelled.value},
+            )
+            raise HTTPException(status_code=400, detail="Insufficient points for this swap")
 
     requester_profile = cosmos.get_profile(requester_uid)
     if recipient_profile.get("email_updates", True) and recipient_profile.get("email"):
@@ -299,6 +313,36 @@ def respond_to_request(
                 "type": "system",
             },
         )
+
+        # Carry the requester's intro message into the chat
+        intro_message = request_data.get("message")
+        if intro_message:
+            cosmos.create_message(
+                conversation_id=conversation_id,
+                data={
+                    "sender_uid": request_data["requester_uid"],
+                    "content": intro_message,
+                    "sent_at": now,
+                    "read_at": None,
+                    "read_by": [],
+                    "type": "text",
+                },
+            )
+
+        # Carry the recipient's accept message into the chat
+        if action.message:
+            cosmos.create_message(
+                conversation_id=conversation_id,
+                data={
+                    "sender_uid": uid,
+                    "content": action.message,
+                    "sent_at": now,
+                    "read_at": None,
+                    "read_by": [],
+                    "type": "text",
+                },
+            )
+
         new_status = SwapRequestStatus.accepted.value
     else:
         # Declined - refund points for indirect swaps
@@ -308,10 +352,10 @@ def respond_to_request(
             points_reserved = request_data.get("points_reserved", 0)
             if points_reserved > 0:
                 _refund_reserved_points(
-                    db, 
-                    request_data["requester_uid"], 
-                    points_reserved, 
-                    request_id
+                    cosmos,
+                    request_data["requester_uid"],
+                    points_reserved,
+                    request_id,
                 )
 
     updated = cosmos.update_swap_request(

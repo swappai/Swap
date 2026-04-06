@@ -4,6 +4,7 @@ import 'package:hugeicons/hugeicons.dart';
 import '../pages/post_skill_page.dart';
 import '../pages/my_skills_page.dart';
 import '../pages/home_page.dart';
+import '../pages/marketplace_page.dart';
 import '../pages/landing_page.dart';
 import '../pages/profile_page.dart';
 import '../pages/request_page.dart';
@@ -80,6 +81,15 @@ class _AppSidebarState extends State<AppSidebar> {
             active: isActive('Home'),
             onTap: () => Navigator.of(context).pushAndRemoveUntil(
               MaterialPageRoute(builder: (_) => HomePage()),
+              (route) => false,
+            ),
+          ),
+          _NavItem(
+            icon: HugeIcons.strokeRoundedStore01,
+            label: 'Marketplace',
+            active: isActive('Marketplace'),
+            onTap: () => Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const MarketplacePage()),
               (route) => false,
             ),
           ),

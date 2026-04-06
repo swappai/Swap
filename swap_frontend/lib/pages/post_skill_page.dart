@@ -38,6 +38,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
   final _hoursCtrl = TextEditingController(text: '1');
   final _tagCtrl = TextEditingController();
   final _deliverableCtrl = TextEditingController();
+  final _swapForCtrl = TextEditingController();
 
   String? _category;
   String? _difficulty;
@@ -74,6 +75,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
       _delivery = skill.delivery;
       _tags.addAll(skill.tags);
       _deliverables.addAll(skill.deliverables);
+      _swapForCtrl.text = skill.swapFor ?? '';
     }
   }
 
@@ -84,6 +86,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
     _hoursCtrl.dispose();
     _tagCtrl.dispose();
     _deliverableCtrl.dispose();
+    _swapForCtrl.dispose();
     super.dispose();
   }
 
@@ -150,6 +153,7 @@ class _PostSkillPageState extends State<PostSkillPage> {
         'delivery': _delivery,
         'tags': _tags,
         'deliverables': _deliverables,
+        'swap_for': _swapForCtrl.text.trim().isNotEmpty ? _swapForCtrl.text.trim() : null,
       };
 
       if (_isEditing) {
@@ -422,6 +426,22 @@ class _PostSkillPageState extends State<PostSkillPage> {
                       fontSize: 12,
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+                _label('Open to Swap For'),
+                const SizedBox(height: 4),
+                Text(
+                  'What would you like in return? e.g., "Guitar lessons, marketing help, meal prep"',
+                  style: TextStyle(color: _textDim, fontSize: 12),
+                ),
+                const SizedBox(height: 8),
+                _textField(
+                  controller: _swapForCtrl,
+                  hint: 'e.g., Guitar lessons, marketing advice...',
+                  maxLength: 500,
+                  minLines: 2,
+                  maxLines: 3,
+                  onChanged: (_) => setState(() {}),
                 ),
               ],
             ),

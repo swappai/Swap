@@ -1,0 +1,1320 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:hugeicons/hugeicons.dart';
+import 'landing_page.dart';
+import 'notifications_page.dart';
+import 'profile_page.dart';
+import 'home_page.dart';
+import '../services/notification_service.dart';
+import '../services/profile_service.dart';
+import '../services/search_service.dart';
+import '../services/skill_service.dart';
+import '../services/b2c_auth_service.dart';
+import '../services/swap_request_service.dart';
+import '../widgets/app_sidebar.dart';
+import '../widgets/star_rating.dart';
+
+class MarketplacePage extends StatefulWidget {
+  const MarketplacePage({super.key});
+
+  @override
+  State<MarketplacePage> createState() => _MarketplacePageState();
+}
+
+class _MarketplacePageState extends State<MarketplacePage> {
+  final _searchService = SearchService();
+  bool _loadingSearch = false;
+  List<SkillSearchResult> _searchResults = [];
+  String _currentQuery = '';
+  int _unreadNotifCount = 0;
+  Timer? _notifTimer;
+  String? _photoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialResults();
+    _fetchUnreadCount();
+    _fetchProfile();
+    _notifTimer = Timer.periodic(const Duration(seconds: 60), (_) => _fetchUnreadCount());
+  }
+
+  @override
+  void dispose() {
+    _notifTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _fetchUnreadCount() async {
+    final uid = _myUid;
+    if (uid == null) return;
+    final count = await NotificationService().getUnreadCount(uid);
+    if (mounted) setState(() => _unreadNotifCount = count);
+  }
+
+  String? get _myUid => B2CAuthService.instance.currentUser?.uid;
+
+  Future<void> _fetchProfile() async {
+    final uid = _myUid;
+    if (uid == null) return;
+    final profile = await ProfileService().getProfile(uid);
+    if (mounted && profile != null) {
+      setState(() => _photoUrl = profile['photo_url'] as String?);
+    }
+  }
+
+  List<SkillSearchResult> _excludeSelf(List<SkillSearchResult> results) {
+    final uid = _myUid;
+    var filtered = uid == null ? results : results.where((r) => r.postedBy != uid).toList();
+    final seen = <String>{};
+    return filtered.where((r) {
+      final key = '${r.postedBy}::${r.title}';
+      return seen.add(key);
+    }).toList();
+  }
+
+  Future<void> _loadInitialResults() async {
+    setState(() => _loadingSearch = true);
+    try {
+      final res = await _searchService.searchSkills(
+        'skills',
+        limit: 12,
+        timeout: const Duration(seconds: 10),
+      );
+      if (mounted) {
+        setState(() {
+          _searchResults = _excludeSelf(res);
+          _currentQuery = '';
+        });
+      }
+    } catch (e) {
+      debugPrint('Initial load error: $e');
+    } finally {
+      if (mounted) setState(() => _loadingSearch = false);
+    }
+  }
+
+  Future<void> _handleSearch(String query, {String? category}) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      if (mounted)
+        setState(() {
+          _searchResults = [];
+          _currentQuery = '';
+        });
+      return;
+    }
+    setState(() {
+      _loadingSearch = true;
+      _searchResults = [];
+    });
+    try {
+      final res = await _searchService.searchSkills(
+        q,
+        category: category,
+        limit: 10,
+        timeout: const Duration(seconds: 10),
+      );
+      if (mounted)
+        setState(() {
+          _searchResults = _excludeSelf(res);
+          _currentQuery = q;
+        });
+    } catch (e) {
+      debugPrint('Search error for "$q": $e');
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _currentQuery = q;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _loadingSearch = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = HomePage.bg;
+    final surface = HomePage.surface;
+    final card = HomePage.card;
+    final textPrimary = HomePage.textPrimary;
+    final textMuted = HomePage.textMuted;
+    final line = HomePage.line;
+    final accent = HomePage.accent;
+    final accentAlt = HomePage.accentAlt;
+
+    final theme = ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      scaffoldBackgroundColor: bg,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: accent,
+        brightness: Brightness.dark,
+        surface: surface,
+        background: bg,
+        primary: accent,
+      ),
+      appBarTheme: AppBarTheme(
+        backgroundColor: bg,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        centerTitle: false,
+        foregroundColor: textPrimary,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: surface,
+        border: OutlineInputBorder(
+          borderSide: BorderSide(color: line),
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: line),
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderSide: BorderSide(color: accent),
+          borderRadius: BorderRadius.all(Radius.circular(14)),
+        ),
+        hintStyle: TextStyle(color: textMuted),
+        labelStyle: TextStyle(color: textMuted),
+      ),
+      chipTheme: ChipThemeData(
+        side: BorderSide(color: line),
+        backgroundColor: surface,
+        selectedColor: const Color(0xFF1A1333),
+        checkmarkColor: accentAlt,
+        labelStyle: TextStyle(color: textPrimary),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      ),
+      dividerColor: line,
+      cardTheme: CardThemeData(
+        color: card,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: line),
+        ),
+        margin: const EdgeInsets.all(0),
+      ),
+    );
+
+    return Theme(
+      data: theme,
+      child: Scaffold(
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AppSidebar(active: 'Marketplace'),
+            Expanded(
+              child: Column(
+                children: [
+                  _TopBar(onSearch: (q) => _handleSearch(q), unreadCount: _unreadNotifCount, photoUrl: _photoUrl),
+                  if (_loadingSearch)
+                    const LinearProgressIndicator(minHeight: 3),
+                  Expanded(
+                    child: _DiscoverPane(
+                      searchResults: _searchResults,
+                      onSearch: (q) => _handleSearch(q),
+                      onCategorySearch: (cat) => _handleSearch(cat, category: cat),
+                      currentQuery: _currentQuery,
+                      onClearSearch: () {
+                        _loadInitialResults();
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================= DISCOVER PANE ============================= */
+
+class _DiscoverPane extends StatefulWidget {
+  _DiscoverPane({
+    Key? key,
+    this.searchResults,
+    this.onSearch,
+    this.onCategorySearch,
+    this.currentQuery,
+    this.onClearSearch,
+  }) : super(key: key);
+
+  final List<SkillSearchResult>? searchResults;
+  final ValueChanged<String>? onSearch;
+  final ValueChanged<String>? onCategorySearch;
+  final String? currentQuery;
+  final VoidCallback? onClearSearch;
+
+  @override
+  State<_DiscoverPane> createState() => _DiscoverPaneState();
+}
+
+class _DiscoverPaneState extends State<_DiscoverPane> {
+  String _selectedCategory = 'All Skills';
+
+  final List<String> categories = const [
+    'All Skills',
+    'Design',
+    'Development',
+    'Business',
+    'Writing',
+    'Language',
+    'Tutoring',
+    'Music',
+    'Other',
+  ];
+
+  void _onCategoryTap(String category) {
+    setState(() => _selectedCategory = category);
+    if (category == 'All Skills') {
+      widget.onClearSearch?.call();
+    } else {
+      widget.onCategorySearch?.call(category);
+    }
+  }
+
+  void _showRequestDialog(BuildContext context, SkillSearchResult skill) {
+    showDialog(
+      context: context,
+      builder: (ctx) => _SkillRequestDialog(skill: skill),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final searchResults = widget.searchResults;
+    final hasResults = searchResults != null && searchResults.isNotEmpty;
+    final hasQuery = widget.currentQuery?.isNotEmpty == true;
+
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            // Header
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    hasQuery
+                        ? 'Search results for "${widget.currentQuery}"'
+                        : 'Find Services to Swap',
+                    style: const TextStyle(
+                      color: HomePage.textPrimary,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+                if (hasQuery)
+                  TextButton.icon(
+                    onPressed: () {
+                      setState(() => _selectedCategory = 'All Skills');
+                      widget.onClearSearch?.call();
+                    },
+                    icon: const Icon(
+                      HugeIcons.strokeRoundedCancel01,
+                      size: 18,
+                      color: Colors.white,
+                    ),
+                    label: const Text('Clear'),
+                    style: TextButton.styleFrom(foregroundColor: Colors.white),
+                  ),
+              ],
+            ),
+            if (!hasQuery)
+              const Text(
+                'Find amazing services and skills to learn and swap from our community',
+                style: TextStyle(color: HomePage.textMuted, fontSize: 13),
+              ),
+            const SizedBox(height: 14),
+
+            // Category chips
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (int i = 0; i < categories.length; i++) ...[
+                    _CategoryChip(
+                      label: categories[i],
+                      selected: _selectedCategory == categories[i],
+                      onTap: () => _onCategoryTap(categories[i]),
+                    ),
+                    const SizedBox(width: 10),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+
+            // Results grid
+            Expanded(
+              child: hasResults
+                  ? LayoutBuilder(
+                      builder: (context, constraints) {
+                        final maxW = constraints.maxWidth;
+                        final crossAxisCount = maxW >= 1200
+                            ? 3
+                            : (maxW >= 780 ? 2 : 1);
+                        return GridView.builder(
+                          gridDelegate:
+                              SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: crossAxisCount,
+                            crossAxisSpacing: 18,
+                            mainAxisSpacing: 18,
+                            mainAxisExtent: 310,
+                          ),
+                          itemCount: searchResults!.length,
+                          itemBuilder: (context, i) {
+                            final r = searchResults[i];
+                            return _SkillCard(
+                              result: r,
+                              onRequest: () =>
+                                  _showRequestDialog(context, r),
+                            );
+                          },
+                        );
+                      },
+                    )
+                  : Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(
+                            HugeIcons.strokeRoundedSearchRemove,
+                            size: 64,
+                            color: HomePage.textMuted,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            hasQuery
+                                ? 'No results found for "${widget.currentQuery}"'
+                                : 'No skills posted yet',
+                            style: const TextStyle(
+                              color: HomePage.textMuted,
+                              fontSize: 18,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            hasQuery
+                                ? 'Try a different search term'
+                                : 'Be the first to share your skills!',
+                            style: const TextStyle(
+                              color: HomePage.textMuted,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/* ============================== WIDGET PIECES ============================= */
+
+class _CategoryChip extends StatelessWidget {
+  const _CategoryChip({
+    required this.label,
+    this.selected = false,
+    this.onTap,
+  });
+  final String label;
+  final bool selected;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: selected ? const Color(0xFF1A1333) : HomePage.surface,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+              color: selected ? HomePage.accent : HomePage.line,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? HomePage.accentAlt : HomePage.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Skill-centric card widget for search results.
+class _SkillCard extends StatelessWidget {
+  const _SkillCard({
+    required this.result,
+    this.onRequest,
+  });
+  final SkillSearchResult result;
+  final VoidCallback? onRequest;
+
+  static IconData _categoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return HugeIcons.strokeRoundedPaintBrush01;
+      case 'development':
+      case 'programming':
+        return HugeIcons.strokeRoundedSourceCode;
+      case 'business':
+        return HugeIcons.strokeRoundedChart;
+      case 'music':
+        return HugeIcons.strokeRoundedMusicNote01;
+      case 'language':
+        return HugeIcons.strokeRoundedTranslation;
+      case 'writing':
+        return HugeIcons.strokeRoundedQuillWrite01;
+      case 'tutoring':
+        return HugeIcons.strokeRoundedTeacher;
+      case 'cooking':
+        return HugeIcons.strokeRoundedChefHat;
+      case 'photography':
+        return HugeIcons.strokeRoundedCamera01;
+      case 'marketing':
+        return HugeIcons.strokeRoundedMegaphone01;
+      case 'fitness':
+        return HugeIcons.strokeRoundedDumbbell01;
+      default:
+        return HugeIcons.strokeRoundedStars;
+    }
+  }
+
+  static Color _categoryColor(String category) {
+    switch (category.toLowerCase()) {
+      case 'design':
+        return const Color(0xFFE879F9);
+      case 'development':
+      case 'programming':
+        return const Color(0xFF60A5FA);
+      case 'business':
+        return const Color(0xFF34D399);
+      case 'music':
+        return const Color(0xFFFBBF24);
+      case 'language':
+        return const Color(0xFFF87171);
+      case 'writing':
+        return const Color(0xFF818CF8);
+      case 'tutoring':
+        return const Color(0xFF2DD4BF);
+      case 'cooking':
+        return const Color(0xFFFF9F43);
+      case 'photography':
+        return const Color(0xFFFF6B6B);
+      case 'marketing':
+        return const Color(0xFF48DBFB);
+      case 'fitness':
+        return const Color(0xFF1DD1A1);
+      default:
+        return const Color(0xFF94A3B8);
+    }
+  }
+
+  String _initials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    if (name.length >= 2) return name.substring(0, 2).toUpperCase();
+    return name.toUpperCase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final catColor = _categoryColor(result.category);
+    final posterName = result.posterName.isNotEmpty ? result.posterName : 'User';
+    final isBusiness = result.posterAccountType == 'business';
+
+    return Material(
+      color: HomePage.surface,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProfilePage(uid: result.postedBy),
+            ),
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: HomePage.line),
+          ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(13),
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: catColor, width: 4),
+                ),
+              ),
+              padding: const EdgeInsets.fromLTRB(12, 16, 16, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Poster avatar row
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: catColor.withValues(alpha: 0.2),
+                        backgroundImage: result.posterPhotoUrl.isNotEmpty
+                            ? NetworkImage(result.posterPhotoUrl)
+                            : null,
+                        child: result.posterPhotoUrl.isEmpty
+                            ? Text(
+                                _initials(posterName),
+                                style: TextStyle(
+                                  color: catColor,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            : null,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        posterName,
+                        style: const TextStyle(
+                          color: HomePage.textPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: HomePage.surfaceAlt,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: HomePage.line),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isBusiness
+                                  ? HugeIcons.strokeRoundedStore01
+                                  : HugeIcons.strokeRoundedUser,
+                              size: 12,
+                              color: HomePage.textMuted,
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              isBusiness ? 'Business' : 'Person',
+                              style: const TextStyle(
+                                color: HomePage.textMuted,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      StarRating(
+                        rating: result.posterAverageRating,
+                        count: result.posterReviewCount,
+                        compact: true,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  // Title row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          result.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: HomePage.textPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _badge(result.category, catColor, icon: _categoryIcon(result.category)),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  // Description
+                  Expanded(
+                    child: Text(
+                      result.description,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: HomePage.textMuted,
+                        fontSize: 13,
+                        height: 1.5,
+                      ),
+                    ),
+                  ),
+                  if (result.swapFor.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(HugeIcons.strokeRoundedArrowDataTransferHorizontal, size: 12, color: HomePage.accentAlt),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text(
+                            'Wants: ${result.swapFor}',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: HomePage.accentAlt,
+                              fontSize: 12,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  // Tags row
+                  if (result.tags.isNotEmpty)
+                    SizedBox(
+                      height: 28,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: result.tags.length > 4 ? 4 : result.tags.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 6),
+                        itemBuilder: (_, i) {
+                          if (i == 3 && result.tags.length > 4) {
+                            return _tagChip('+${result.tags.length - 3}',
+                                highlight: true, categoryColor: catColor);
+                          }
+                          return _tagChip(result.tags[i], categoryColor: catColor);
+                        },
+                      ),
+                    ),
+                  const SizedBox(height: 10),
+                  // Bottom row
+                  Row(
+                    children: [
+                      _pill(result.difficulty, const Color(0xFFF59E0B)),
+                      const SizedBox(width: 8),
+                      _pill(result.delivery, HomePage.textMuted),
+                      const SizedBox(width: 8),
+                      _pill(
+                        '${result.estimatedHours.toStringAsFixed(result.estimatedHours == result.estimatedHours.roundToDouble() ? 0 : 1)}h',
+                        HomePage.textMuted,
+                      ),
+                      if (result.posterCity.isNotEmpty) ...[
+                        const SizedBox(width: 8),
+                        const Icon(Icons.location_on_outlined,
+                            size: 12, color: HomePage.textMuted),
+                        const SizedBox(width: 2),
+                        Text(
+                          result.posterCity,
+                          style: const TextStyle(
+                            color: HomePage.textMuted,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                      const Spacer(),
+                      SizedBox(
+                        height: 34,
+                        child: FilledButton.icon(
+                          onPressed: onRequest,
+                          icon: const Icon(
+                              HugeIcons.strokeRoundedArrowDataTransferHorizontal,
+                              size: 16),
+                          label: const Text('Request',
+                              style: TextStyle(fontSize: 13)),
+                          style: FilledButton.styleFrom(
+                            backgroundColor: HomePage.accent,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding:
+                                const EdgeInsets.symmetric(horizontal: 12),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  static Widget _badge(String text, Color color, {IconData? icon}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 12, color: color),
+            const SizedBox(width: 4),
+          ],
+          Text(
+            text,
+            style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static Widget _pill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: HomePage.surfaceAlt,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: HomePage.line),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(color: color, fontSize: 11),
+      ),
+    );
+  }
+
+  static Widget _tagChip(String text,
+      {bool highlight = false, Color? categoryColor}) {
+    final chipColor = categoryColor ?? HomePage.accent;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: highlight
+            ? chipColor.withValues(alpha: 0.15)
+            : chipColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: chipColor.withValues(alpha: 0.4),
+        ),
+      ),
+      child: Text(
+        text,
+        style: TextStyle(
+          color: highlight ? chipColor : HomePage.textPrimary,
+          fontSize: 12,
+          fontWeight: highlight ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+    );
+  }
+}
+
+/// Swap request dialog with skill selectors.
+class _SkillRequestDialog extends StatefulWidget {
+  const _SkillRequestDialog({required this.skill});
+  final SkillSearchResult skill;
+
+  @override
+  State<_SkillRequestDialog> createState() => _SkillRequestDialogState();
+}
+
+class _SkillRequestDialogState extends State<_SkillRequestDialog> {
+  final _msgCtrl = TextEditingController();
+  final _pointsCtrl = TextEditingController();
+  bool _sending = false;
+  bool _loadingSkills = true;
+  bool _isDirect = true;
+
+  List<Skill> _recipientSkills = [];
+  List<Skill> _mySkills = [];
+
+  Skill? _selectedNeed; // what I need from them
+  Skill? _selectedOffer; // what I'm offering
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSkills();
+  }
+
+  @override
+  void dispose() {
+    _msgCtrl.dispose();
+    _pointsCtrl.dispose();
+    super.dispose();
+  }
+
+  bool get _canSend {
+    if (_selectedNeed == null) return false;
+    if (_isDirect) return _selectedOffer != null;
+    final pts = int.tryParse(_pointsCtrl.text) ?? 0;
+    return pts > 0;
+  }
+
+  Future<void> _loadSkills() async {
+    final myUid = B2CAuthService.instance.currentUser?.uid;
+    if (myUid == null) {
+      setState(() => _loadingSkills = false);
+      return;
+    }
+
+    try {
+      final skillService = SkillService();
+      final futures = await Future.wait([
+        skillService.getSkillsByUser(widget.skill.postedBy),
+        skillService.getSkillsByUser(myUid),
+      ]);
+      if (mounted) {
+        setState(() {
+          _recipientSkills = futures[0];
+          _mySkills = futures[1];
+          _loadingSkills = false;
+
+          // Pre-select the clicked skill as "what I need"
+          final match = _recipientSkills.where(
+            (s) => s.id == widget.skill.skillId || s.id == widget.skill.id,
+          );
+          if (match.isNotEmpty) {
+            _selectedNeed = match.first;
+          } else if (_recipientSkills.isNotEmpty) {
+            _selectedNeed = _recipientSkills.first;
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading skills for dialog: $e');
+      if (mounted) setState(() => _loadingSkills = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final recipientName = widget.skill.posterName.isNotEmpty
+        ? widget.skill.posterName
+        : 'User';
+
+    return AlertDialog(
+      backgroundColor: HomePage.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: HomePage.line),
+      ),
+      title: Text(
+        'Send Swap Request to $recipientName',
+        style: const TextStyle(
+          color: HomePage.textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+      content: SizedBox(
+        width: 440,
+        child: _loadingSkills
+            ? const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            : SingleChildScrollView(
+                child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Direct / Indirect toggle
+                  Container(
+                    decoration: BoxDecoration(
+                      color: HomePage.bg,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.all(3),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isDirect = true),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: _isDirect ? HomePage.accent : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Skill Exchange',
+                                style: TextStyle(
+                                  color: _isDirect ? Colors.white : HomePage.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _isDirect = false),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: BoxDecoration(
+                                color: !_isDirect ? HomePage.accent : Colors.transparent,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              alignment: Alignment.center,
+                              child: Text(
+                                'Use Points',
+                                style: TextStyle(
+                                  color: !_isDirect ? Colors.white : HomePage.textMuted,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // What I need from them
+                  const Text(
+                    'What you need from them',
+                    style: TextStyle(
+                      color: HomePage.textMuted,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  _recipientSkills.isNotEmpty
+                      ? DropdownButtonFormField<Skill>(
+                          value: _selectedNeed,
+                          dropdownColor: HomePage.surface,
+                          style: const TextStyle(color: HomePage.textPrimary),
+                          decoration: InputDecoration(
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: HomePage.line),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 10),
+                          ),
+                          items: _recipientSkills
+                              .map((s) => DropdownMenuItem<Skill>(
+                                    value: s,
+                                    child: Text(
+                                      '${s.title} (${s.category})',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ))
+                              .toList(),
+                          onChanged: (v) =>
+                              setState(() => _selectedNeed = v),
+                        )
+                      : const Text(
+                          'No skills posted by this user',
+                          style: TextStyle(color: HomePage.textMuted),
+                        ),
+                  const SizedBox(height: 16),
+                  if (_isDirect) ...[
+                    // What I'm offering
+                    const Text(
+                      'What you\'re offering',
+                      style: TextStyle(
+                        color: HomePage.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    _mySkills.isNotEmpty
+                        ? DropdownButtonFormField<Skill>(
+                            value: _selectedOffer,
+                            dropdownColor: HomePage.surface,
+                            style: const TextStyle(color: HomePage.textPrimary),
+                            decoration: InputDecoration(
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                                borderSide: const BorderSide(color: HomePage.line),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 10),
+                            ),
+                            items: _mySkills
+                                .map((s) => DropdownMenuItem<Skill>(
+                                      value: s,
+                                      child: Text(
+                                        '${s.title} (${s.category})',
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ))
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _selectedOffer = v),
+                          )
+                        : const Text(
+                            'You haven\'t posted any skills yet. Post a skill first!',
+                            style: TextStyle(color: HomePage.textMuted),
+                          ),
+                  ] else ...[
+                    const Text(
+                      'Points to offer',
+                      style: TextStyle(
+                        color: HomePage.textMuted,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: _pointsCtrl,
+                      style: const TextStyle(color: HomePage.textPrimary),
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Enter points amount',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: const BorderSide(color: HomePage.line),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  // Message
+                  TextField(
+                    controller: _msgCtrl,
+                    style: const TextStyle(color: HomePage.textPrimary),
+                    maxLines: 3,
+                    decoration: const InputDecoration(
+                      labelText: 'Message (optional)',
+                      hintText: 'Add a personal note...',
+                    ),
+                  ),
+                ],
+              ),
+              ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: _sending ? null : () => Navigator.of(context).pop(),
+          child: Text(
+            'Cancel',
+            style: TextStyle(color: HomePage.textMuted),
+          ),
+        ),
+        FilledButton(
+          onPressed: _sending || !_canSend
+              ? null
+              : _sendRequest,
+          style: FilledButton.styleFrom(
+            backgroundColor: HomePage.accent,
+            foregroundColor: Colors.white,
+          ),
+          child: _sending
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text('Send Request'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _sendRequest() async {
+    final currentUser = B2CAuthService.instance.currentUser;
+    if (currentUser == null || _selectedNeed == null) return;
+    if (_isDirect && _selectedOffer == null) return;
+
+    final pointsOffered = _isDirect ? null : int.tryParse(_pointsCtrl.text);
+    if (!_isDirect && (pointsOffered == null || pointsOffered <= 0)) return;
+
+    setState(() => _sending = true);
+    try {
+      await SwapRequestService().createRequest(
+        requesterUid: currentUser.uid,
+        recipientUid: widget.skill.postedBy,
+        requesterOffer: _isDirect ? _selectedOffer!.title : '',
+        requesterNeed: _selectedNeed!.title,
+        message: _msgCtrl.text.trim().isNotEmpty ? _msgCtrl.text.trim() : null,
+        requesterOfferSkillId: _isDirect ? _selectedOffer!.id : null,
+        requesterNeedSkillId: _selectedNeed!.id,
+        swapType: _isDirect ? 'direct' : 'indirect',
+        pointsOffered: pointsOffered,
+      );
+      if (mounted) Navigator.of(context).pop();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Swap request sent!'),
+            backgroundColor: HomePage.success,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Request error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to send request: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+}
+
+class _TopBar extends StatelessWidget implements PreferredSizeWidget {
+  const _TopBar({this.onSearch, this.unreadCount = 0, this.photoUrl});
+
+  final ValueChanged<String>? onSearch;
+  final int unreadCount;
+  final String? photoUrl;
+
+  @override
+  Size get preferredSize => const Size.fromHeight(64);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: preferredSize.height,
+      color: HomePage.bg,
+      padding: const EdgeInsets.fromLTRB(24, 10, 12, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 44,
+              child: TextField(
+                onSubmitted: (v) => onSearch?.call(v),
+                decoration: InputDecoration(
+                  hintText: 'Search skills...',
+                  prefixIcon: const Icon(
+                    HugeIcons.strokeRoundedSearch01,
+                    color: HomePage.textMuted,
+                  ),
+                  filled: true,
+                  fillColor: HomePage.surface,
+                  contentPadding: EdgeInsets.zero,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide(color: HomePage.line),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide(color: HomePage.line),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(999),
+                    borderSide: BorderSide(color: HomePage.accent),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: 'Notifications',
+                icon: const Icon(HugeIcons.strokeRoundedNotification01),
+                onPressed: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const NotificationsPage()),
+                  );
+                },
+              ),
+              if (unreadCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF22C55E),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    child: Center(
+                      child: Text(
+                        unreadCount > 99 ? '99+' : '$unreadCount',
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w700),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          IconButton(
+            tooltip: 'Sign out',
+            icon: const Icon(HugeIcons.strokeRoundedLogout01),
+            onPressed: () async {
+              await B2CAuthService.instance.signOut();
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const LandingPage()),
+                (route) => false,
+              );
+            },
+          ),
+          const SizedBox(width: 4),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ProfilePage()),
+              );
+            },
+            child: CircleAvatar(
+              radius: 18,
+              backgroundColor: HomePage.surface,
+              backgroundImage: photoUrl != null && photoUrl!.isNotEmpty
+                  ? NetworkImage(photoUrl!)
+                  : null,
+              child: photoUrl == null || photoUrl!.isEmpty
+                  ? const Icon(HugeIcons.strokeRoundedUser, size: 18, color: HomePage.textMuted)
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

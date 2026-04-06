@@ -31,6 +31,7 @@ class ProfileBase(BaseModel):
     email_updates: Optional[bool] = Field(True, description="Email updates enabled")
     show_city: Optional[bool] = Field(True, description="Show city publicly")
     account_type: Optional[str] = Field("person", description="Account type: person or business")
+    website: Optional[str] = Field(None, max_length=500, description="Website URL (especially for businesses)")
 
 
 class ProfileCreate(ProfileBase):
@@ -56,6 +57,7 @@ class ProfileUpdate(BaseModel):
     email_updates: Optional[bool] = None
     show_city: Optional[bool] = None
     account_type: Optional[str] = None
+    website: Optional[str] = None
 
 
 class ProfileResponse(ProfileBase):
@@ -135,6 +137,7 @@ class SkillCreate(BaseModel):
     delivery: str = Field("Remote Only", description="Delivery method")
     tags: List[str] = Field(default_factory=list, description="Tags")
     deliverables: List[str] = Field(default_factory=list, description="Deliverables")
+    swap_for: Optional[str] = Field(None, max_length=500, description="What the poster wants in return for this skill")
 
 
 class SkillUpdate(BaseModel):
@@ -147,6 +150,7 @@ class SkillUpdate(BaseModel):
     delivery: Optional[str] = None
     tags: Optional[List[str]] = None
     deliverables: Optional[List[str]] = None
+    swap_for: Optional[str] = Field(None, max_length=500)
 
 
 class SkillResponse(BaseModel):
@@ -161,6 +165,7 @@ class SkillResponse(BaseModel):
     delivery: str = "Remote Only"
     tags: List[str] = Field(default_factory=list)
     deliverables: List[str] = Field(default_factory=list)
+    swap_for: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -184,6 +189,8 @@ class SkillSearchResult(BaseModel):
     poster_average_rating: float = 0.0
     poster_review_count: int = 0
     poster_account_type: str = "person"
+    poster_photo_url: str = ""
+    swap_for: str = ""
     score: float = 0.0
 
 
@@ -215,12 +222,15 @@ class SwapRequestCreate(BaseModel):
     message: Optional[str] = Field(None, max_length=500, description="Optional intro message")
     requester_offer_skill_id: Optional[str] = Field(None, description="ID of the skill being offered")
     requester_need_skill_id: Optional[str] = Field(None, description="ID of the skill being requested")
+    swap_type: SwapType = SwapType.direct
+    points_offered: Optional[int] = Field(None, ge=1, description="Points offered for indirect swap")
 
 
 class SwapRequestAction(BaseModel):
     """Schema for responding to a swap request."""
 
     action: Literal["accept", "decline"] = Field(..., description="Accept or decline the request")
+    message: Optional[str] = Field(None, description="Optional message to send when accepting")
 
 
 class SwapParticipant(BaseModel):
@@ -399,6 +409,8 @@ class PointsTransactionReason(str, Enum):
     priority_boost = "priority_boost"
     request_without_reciprocity = "request_without_reciprocity"
     bonus = "bonus"
+    indirect_swap_reserved = "indirect_swap_reserved"
+    indirect_swap_refund = "indirect_swap_refund"
 
 
 class SkillLevel(str, Enum):

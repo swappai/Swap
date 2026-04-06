@@ -29,6 +29,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   final _username = TextEditingController();
   final _bio = TextEditingController();
   final _city = TextEditingController();
+  final _website = TextEditingController();
 
   String? _timezone;
   String _accountType = 'person';
@@ -71,6 +72,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _username.dispose();
     _bio.dispose();
     _city.dispose();
+    _website.dispose();
     super.dispose();
   }
 
@@ -93,6 +95,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         _skillsToOffer = (data['skills_to_offer'] ?? '').toString();
         _servicesNeeded = (data['services_needed'] ?? '').toString();
         _existingPhotoUrl = data['photo_url'] as String?;
+        _website.text = (data['website'] ?? '').toString();
         _loading = false;
       });
     } else {
@@ -162,6 +165,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         showCity: _showCity,
         accountType: _accountType,
         photoUrl: photoUrl,
+        website: _website.text.trim(),
         timeout: const Duration(seconds: 12),
       );
 
@@ -340,6 +344,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                 ),
                               ),
                             ]),
+                            const SizedBox(height: 12),
+
+                            // Website
+                            TextFormField(
+                              controller: _website,
+                              style: const TextStyle(color: textPrimary),
+                              decoration: const InputDecoration(
+                                labelText: 'Website',
+                                hintText: 'https://yourwebsite.com',
+                                prefixIcon: Icon(HugeIcons.strokeRoundedInternet, color: textMuted),
+                              ),
+                            ),
                             const SizedBox(height: 24),
 
                             // Account Type

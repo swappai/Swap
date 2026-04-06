@@ -3,8 +3,12 @@ import 'package:hugeicons/hugeicons.dart';
 
 import '../models/notification.dart';
 import '../services/notification_service.dart';
+import '../services/swap_request_service.dart';
+import '../services/messaging_service.dart';
 import '../services/b2c_auth_service.dart';
 import 'home_page.dart';
+import 'profile_page.dart';
+import 'messages/chat_page.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -44,6 +48,61 @@ class _NotificationsPageState extends State<NotificationsPage> {
     final uid = B2CAuthService.instance.currentUser?.uid;
     if (uid == null) return;
     await _service.markRead(n.id, uid);
+    _load();
+  }
+
+  Future<void> _handleTap(AppNotification n) async {
+    final uid = B2CAuthService.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // Mark as read first
+    if (!n.isRead) {
+      _service.markRead(n.id, uid);
+    }
+
+    try {
+      switch (n.type) {
+        case 'swap_accepted':
+          // relatedId = swap request id → get conversation → open chat
+          if (n.relatedId != null) {
+            final req = await SwapRequestService().getRequest(n.relatedId!, uid);
+            if (req.conversationId != null && mounted) {
+              final conv = await MessagingService().getConversation(req.conversationId!, uid);
+              if (mounted) {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => ChatPage(conversation: conv)),
+                );
+              }
+            }
+          }
+          break;
+        case 'new_message':
+          // relatedId = conversation_id
+          if (n.relatedId != null) {
+            final conv = await MessagingService().getConversation(n.relatedId!, uid);
+            if (mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => ChatPage(conversation: conv)),
+              );
+            }
+          }
+          break;
+        case 'swap_request':
+          // Navigate to requester's profile
+          if (n.senderUid != null && mounted) {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => ProfilePage(uid: n.senderUid)),
+            );
+          }
+          break;
+        case 'swap_declined':
+          // Just mark read, no navigation
+          break;
+      }
+    } catch (e) {
+      debugPrint('Notification tap error: $e');
+    }
+
     _load();
   }
 
@@ -127,7 +186,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                       final n = _notifications[i];
                       final color = _typeColor(n.type);
                       return InkWell(
-                        onTap: () => _markRead(n),
+                        onTap: () => _handleTap(n),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           padding: const EdgeInsets.all(14),

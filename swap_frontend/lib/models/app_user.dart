@@ -36,6 +36,7 @@ class AppUser {
   final bool? showCity;
   final double averageRating;
   final int reviewCount;
+  final String? website;
 
   AppUser({
     required this.uid,
@@ -55,6 +56,7 @@ class AppUser {
     this.showCity,
     this.averageRating = 0.0,
     this.reviewCount = 0,
+    this.website,
   });
 
   Map<String, dynamic> toMap() => {
@@ -75,5 +77,6 @@ class AppUser {
     'showCity': showCity,
     'averageRating': averageRating,
     'reviewCount': reviewCount,
+    'website': website,
   };
 }

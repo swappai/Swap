@@ -19,7 +19,11 @@ def _build_embedding_text(data: dict) -> str:
     description = data.get("description", "")
     category = data.get("category", "")
     difficulty = data.get("difficulty", "")
-    return f"{title} - {description}. Category: {category}. Level: {difficulty}"
+    swap_for = data.get("swap_for", "") or ""
+    text = f"{title} - {description}. Category: {category}. Level: {difficulty}"
+    if swap_for:
+        text += f". Open to swap for: {swap_for}"
+    return text
 
 
 def _rebuild_profile_skills(cosmos, uid: str) -> None:
@@ -73,6 +77,8 @@ def create_skill(
             "poster_average_rating": profile.get("average_rating", 0),
             "poster_review_count": profile.get("review_count", 0),
             "poster_account_type": profile.get("account_type", "person"),
+            "poster_photo_url": profile.get("photo_url", ""),
+            "swap_for": skill_doc.get("swap_for", ""),
         },
     )
 
@@ -129,6 +135,8 @@ def update_skill(
             "poster_average_rating": profile.get("average_rating", 0),
             "poster_review_count": profile.get("review_count", 0),
             "poster_account_type": profile.get("account_type", "person"),
+            "poster_photo_url": profile.get("photo_url", ""),
+            "swap_for": updated_doc.get("swap_for", ""),
         },
     )
 

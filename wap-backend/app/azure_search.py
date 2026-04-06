@@ -67,6 +67,7 @@ class AzureSearchService:
             SimpleField(name="dm_open", type=SearchFieldDataType.Boolean, filterable=True),
             SimpleField(name="show_city", type=SearchFieldDataType.Boolean, filterable=True),
             SimpleField(name="account_type", type=SearchFieldDataType.String, filterable=True),
+            SimpleField(name="website", type=SearchFieldDataType.String),
             SimpleField(name="swap_credits", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             SimpleField(name="swaps_completed", type=SearchFieldDataType.Int32, filterable=True, sortable=True),
             SimpleField(name="average_rating", type=SearchFieldDataType.Double, filterable=True, sortable=True),
@@ -140,6 +141,7 @@ class AzureSearchService:
             "dm_open": payload.get("dm_open", True),
             "show_city": payload.get("show_city", True),
             "account_type": payload.get("account_type", "person"),
+            "website": payload.get("website", ""),
             "swap_credits": payload.get("swap_credits", 0) or 0,
             "swaps_completed": payload.get("swaps_completed", 0) or 0,
             "average_rating": float(payload.get("average_rating", 0) or 0),
@@ -311,6 +313,8 @@ class SkillsSearchService:
             SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
             SimpleField(name="poster_review_count", type=SearchFieldDataType.Int32, sortable=True),
             SimpleField(name="poster_account_type", type=SearchFieldDataType.String, filterable=True),
+            SimpleField(name="poster_photo_url", type=SearchFieldDataType.String),
+            SearchableField(name="swap_for", type=SearchFieldDataType.String),
             SearchField(
                 name="skill_vec",
                 type=SearchFieldDataType.Collection(SearchFieldDataType.Single),
@@ -359,6 +363,8 @@ class SkillsSearchService:
             "poster_average_rating": float(payload.get("poster_average_rating", 0) or 0),
             "poster_review_count": int(payload.get("poster_review_count", 0) or 0),
             "poster_account_type": payload.get("poster_account_type", "person"),
+            "poster_photo_url": payload.get("poster_photo_url", ""),
+            "swap_for": payload.get("swap_for", ""),
             "skill_vec": skill_vec,
         }
         self.search_client.merge_or_upload_documents([document])
@@ -413,6 +419,8 @@ class SkillsSearchService:
                     "poster_average_rating": result.get("poster_average_rating", 0),
                     "poster_review_count": result.get("poster_review_count", 0),
                     "poster_account_type": result.get("poster_account_type") or "person",
+                    "poster_photo_url": result.get("poster_photo_url", ""),
+                    "swap_for": result.get("swap_for", ""),
                     "score": score,
                 })
 

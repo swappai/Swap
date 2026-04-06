@@ -72,6 +72,8 @@ class SkillSearchResult {
   final double posterAverageRating;
   final int posterReviewCount;
   final String posterAccountType;
+  final String posterPhotoUrl;
+  final String swapFor;
   final double score;
 
   SkillSearchResult({
@@ -92,6 +94,8 @@ class SkillSearchResult {
     required this.posterAverageRating,
     required this.posterReviewCount,
     required this.posterAccountType,
+    required this.posterPhotoUrl,
+    required this.swapFor,
     required this.score,
   });
 
@@ -120,6 +124,8 @@ class SkillSearchResult {
         posterAverageRating: (j['poster_average_rating'] as num?)?.toDouble() ?? 0.0,
         posterReviewCount: (j['poster_review_count'] as num?)?.toInt() ?? 0,
         posterAccountType: j['poster_account_type'] as String? ?? 'person',
+        posterPhotoUrl: j['poster_photo_url'] as String? ?? '',
+        swapFor: j['swap_for'] as String? ?? '',
         score: (j['score'] is num)
             ? (j['score'] as num).toDouble()
             : double.tryParse('${j['score']}') ?? 0.0,
