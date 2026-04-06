@@ -307,7 +307,7 @@ class SkillsSearchService:
                 searchable=True,
                 filterable=True,
             ),
-            SimpleField(name="poster_name", type=SearchFieldDataType.String),
+            SearchableField(name="poster_name", type=SearchFieldDataType.String),
             SimpleField(name="poster_city", type=SearchFieldDataType.String, filterable=True),
             SimpleField(name="poster_swap_credits", type=SearchFieldDataType.Int32, sortable=True),
             SimpleField(name="poster_average_rating", type=SearchFieldDataType.Double, sortable=True),
